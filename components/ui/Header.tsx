@@ -43,6 +43,16 @@ export default function Header() {
           >
             俄罗斯方块
           </Link>
+          <Link
+            href="/gomoku"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/gomoku"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            五子棋
+          </Link>
         </nav>
       </div>
     </header>

@@ -12,12 +12,12 @@ export default function Home() {
             荣升的游戏小站
           </h1>
           <p className="text-slate-400 text-lg">
-            畅玩贪吃蛇和俄罗斯方块，支持多种主题和难度设置
+            畅玩贪吃蛇、俄罗斯方块和五子棋，支持多种主题和难度设置
           </p>
         </div>
 
         {/* Game cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           <Link
             href="/snake"
             className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-green-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
@@ -62,6 +62,30 @@ export default function Home() {
               </span>
             </div>
             <div className="absolute top-4 right-4 text-slate-600 group-hover:text-indigo-500 transition-colors text-xl">
+              →
+            </div>
+          </Link>
+
+          <Link
+            href="/gomoku"
+            className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-amber-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
+          >
+            <div className="text-6xl mb-4">⚫</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-amber-400 transition-colors">
+              五子棋
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              与 AI 或好友对弈，率先连成五子即获胜！
+            </p>
+            <div className="flex gap-2 text-xs">
+              <span className="bg-amber-900/50 text-amber-300 px-2 py-1 rounded">
+                人机 / 双人
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                三档难度
+              </span>
+            </div>
+            <div className="absolute top-4 right-4 text-slate-600 group-hover:text-amber-500 transition-colors text-xl">
               →
             </div>
           </Link>
