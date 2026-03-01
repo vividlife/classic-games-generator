@@ -83,7 +83,7 @@ function findSolutions(cards: number[]): string[] {
             const r2 = calc(r1, op2, c);
             if (r2 !== null) {
               const r3 = calc(r2, op3, d);
-              if (Math.abs(r3! - 24) < 0.0001) {
+              if (r3 !== null && Math.abs(r3 - 24) < 0.0001) {
                 solutions.push(`((${a} ${op1} ${b}) ${op2} ${c}) ${op3} ${d}`);
               }
             }
@@ -95,7 +95,7 @@ function findSolutions(cards: number[]): string[] {
             const r5 = calc(a, op1, r4);
             if (r5 !== null) {
               const r6 = calc(r5, op3, d);
-              if (Math.abs(r6! - 24) < 0.0001) {
+              if (r6 !== null && Math.abs(r6 - 24) < 0.0001) {
                 solutions.push(`(${a} ${op1} (${b} ${op2} ${c})) ${op3} ${d}`);
               }
             }
@@ -106,7 +106,7 @@ function findSolutions(cards: number[]): string[] {
           const r8 = calc(c, op3, d);
           if (r7 !== null && r8 !== null) {
             const r9 = calc(r7, op2, r8);
-            if (Math.abs(r9! - 24) < 0.0001) {
+            if (r9 !== null && Math.abs(r9 - 24) < 0.0001) {
               solutions.push(`(${a} ${op1} ${b}) ${op2} (${c} ${op3} ${d})`);
             }
           }
@@ -117,7 +117,7 @@ function findSolutions(cards: number[]): string[] {
             const r11 = calc(r10, op3, d);
             if (r11 !== null) {
               const r12 = calc(a, op1, r11);
-              if (Math.abs(r12! - 24) < 0.0001) {
+              if (r12 !== null && Math.abs(r12 - 24) < 0.0001) {
                 solutions.push(`${a} ${op1} ((${b} ${op2} ${c}) ${op3} ${d})`);
               }
             }
@@ -129,7 +129,7 @@ function findSolutions(cards: number[]): string[] {
             const r14 = calc(b, op2, r13);
             if (r14 !== null) {
               const r15 = calc(a, op1, r14);
-              if (Math.abs(r15! - 24) < 0.0001) {
+              if (r15 !== null && Math.abs(r15 - 24) < 0.0001) {
                 solutions.push(`${a} ${op1} (${b} ${op2} (${c} ${op3} ${d}))`);
               }
             }
@@ -254,8 +254,8 @@ export function useGame24() {
     }
   }, [state.expression, state.isRunning]);
 
-  // 显示提示
-  const showHintFunc = useCallback(() => {
+  // 显示提示（函数重命名为 revealHint）
+  const revealHint = useCallback(() => {
     const solutions = findSolutions(state.cards.map(c => c.value));
     setState(prev => ({
       ...prev,
@@ -271,6 +271,6 @@ export function useGame24() {
     clearExpression,
     backspace,
     checkAnswer,
-    showHint: showHintFunc,
+    revealHint,
   };
 }

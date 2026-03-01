@@ -107,7 +107,7 @@ export default function Game24Game() {
         <Button variant="primary" size="sm" onClick={game.checkAnswer}>
           验证
         </Button>
-        <Button variant="danger" size="sm" onClick={game.showHint}>
+        <Button variant="danger" size="sm" onClick={game.revealHint}>
           提示
         </Button>
       </div>

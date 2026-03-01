@@ -9,17 +9,18 @@
 
 ## 开发清单
 
-- [ ] 创建24点游戏页面 `app/game24/page.tsx`
-- [ ] 实现24点游戏核心逻辑 `lib/use24Game.ts`
+- [x] 创建24点游戏页面 `app/game24/page.tsx`
+- [x] 实现24点游戏核心逻辑 `lib/useGame24.ts`
   - 随机生成4个数字
   - 验证玩家答案是否等于24
   - 检查是否使用所有4个数字
-- [ ] 创建24点组件 `components/game24/Game24Board.tsx`
+- [x] 创建24点组件 `components/game24/Game24Game.tsx`
   - 数字卡片显示
   - 运算符选择界面
   - 计时器显示
-- [ ] 添加提示功能（显示一种可行解法）
-- [ ] 更新主导航和主页，添加24点入口
-- [ ] 添加分数记录功能
-- [ ] 本地构建测试 (npm run build)
-- [ ] 写变更摘要到 .dispatch/tasks/add-24game/output.md
+- [x] 添加提示功能（显示一种可行解法）
+- [x] 更新主导航和主页，添加24点入口
+- [x] 添加分数记录功能
+- [x] 本地构建测试 (npm run build)
+- [x] 提交到 GitHub (commit: e571bea)
+- [x] 推送到远程仓库
