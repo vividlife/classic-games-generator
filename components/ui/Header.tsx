@@ -83,6 +83,16 @@ export default function Header() {
           >
             狼人杀
           </Link>
+          <Link
+            href="/sudoku"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/sudoku"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            数独
+          </Link>
         </nav>
       </div>
     </header>
