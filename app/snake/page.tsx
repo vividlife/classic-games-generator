@@ -4,7 +4,7 @@ import GameSettings from "@/components/ui/GameSettings";
 import Link from "next/link";
 
 export const metadata = {
-  title: "贪吃蛇 - 经典游戏",
+  title: "贪吃蛇 - 荣升的游戏小站",
   description: "畅玩经典贪吃蛇游戏，支持自定义主题和难度",
 };
 

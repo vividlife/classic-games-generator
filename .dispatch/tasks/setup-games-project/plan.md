@@ -12,6 +12,6 @@
 - [x] 实现皮肤/主题切换功能 (4 主题: Classic/Neon/Forest/Ocean, THEMES config)
 - [x] 添加分数系统和排行榜 (scoreManager.ts, localStorage 持久化, ScoreBoard 组件, 分数倍率)
 - [x] 配置 Vercel 部署 (vercel.json 配置文件)
-- [ ] 初始化 Git 仓库并推送到 GitHub
-- [ ] 编写 README 文档和使用说明
-- [ ] 输出变更摘要到 .dispatch/tasks/setup-games-project/output.md
+- [x] 初始化 Git 仓库并推送到 GitHub (https://github.com/vividlife/classic-games-generator)
+- [x] 编写 README 文档和使用说明 (功能说明、控制方式、技术栈、部署指南)
+- [x] 输出变更摘要到 .dispatch/tasks/setup-games-project/output.md

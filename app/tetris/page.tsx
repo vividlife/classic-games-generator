@@ -4,7 +4,7 @@ import GameSettings from "@/components/ui/GameSettings";
 import Link from "next/link";
 
 export const metadata = {
-  title: "俄罗斯方块 - 经典游戏",
+  title: "俄罗斯方块 - 荣升的游戏小站",
   description: "畅玩经典俄罗斯方块，支持自定义主题和难度",
 };
 

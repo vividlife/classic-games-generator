@@ -15,4 +15,4 @@
 - [x] 将所有界面文本改为中文 - 已更新所有组件、页面、难度标签和主题名称
 - [x] 本地构建测试 (npm run build) - 编译成功，无 TypeScript 错误
 - [x] 验证修复效果 - 编译通过，所有路由生成正常
-- [ ] 写变更摘要到 .dispatch/tasks/fix-game-bugs/output.md
+- [x] 写变更摘要到 .dispatch/tasks/fix-game-bugs/output.md

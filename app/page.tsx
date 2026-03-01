@@ -9,7 +9,7 @@ export default function Home() {
       <main className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-white mb-3">
-            经典游戏
+            荣升的游戏小站
           </h1>
           <p className="text-slate-400 text-lg">
             畅玩贪吃蛇和俄罗斯方块，支持多种主题和难度设置
