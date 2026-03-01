@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useGame24 } from "@/lib/useGame24";
 import Button from "@/components/ui/Button";
 
@@ -10,10 +12,19 @@ export default function Game24Game() {
   if (game.cards.length === 0) {
     return (
       <div className="flex flex-col items-center gap-5 py-6">
+        <div className="w-full flex items-center gap-2 mb-2">
+          <Link
+            href="/"
+            className="text-slate-400 hover:text-white transition-colors flex items-center gap-1"
+          >
+            ← 返回
+          </Link>
+        </div>
+        
         <div className="text-center">
           <div className="text-4xl sm:text-5xl mb-2">🃏</div>
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">24点</h2>
-          <p className="text-slate-400 text-xs sm:text-sm">使用四张牌通过加减乘除运算得到24</p>
+          <p className="text-slate-400 text-xs sm:text-sm">使用四张数字牌通过加减乘除运算得到24</p>
         </div>
 
         <Button size="lg" onClick={game.startGame}>
@@ -21,7 +32,7 @@ export default function Game24Game() {
         </Button>
 
         <div className="bg-slate-800/60 rounded-xl p-4 text-xs text-slate-400 max-w-xs text-center space-y-1">
-          <p>每局随机4张牌（A=1, J=11, Q=12, K=13）</p>
+          <p>每局随机4张数字牌（1-9）</p>
           <p>使用 + - × ÷ 运算使结果等于24</p>
           <p>每张牌只能使用一次</p>
           <p>60秒内完成得分更高</p>
@@ -38,6 +49,16 @@ export default function Game24Game() {
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4 w-full max-w-2xl mx-auto px-2 sm:px-4">
+      {/* 返回按钮 */}
+      <div className="w-full">
+        <Link
+          href="/"
+          className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-sm"
+        >
+          ← 返回首页
+        </Link>
+      </div>
+
       {/* 状态栏 */}
       <div className="flex items-center justify-between text-sm">
         <div className="text-center">
@@ -56,21 +77,31 @@ export default function Game24Game() {
         </div>
       </div>
 
-      {/* 牌面 */}
+      {/* 牌面 - 显示是否已使用 */}
       <div className="flex justify-center gap-2 sm:gap-3">
-        {game.cards.map((card, idx) => (
-          <button
-            key={idx}
-            onClick={() => game.addToExpression(String(card.value))}
-            className="w-14 h-20 sm:w-16 sm:h-24 bg-white rounded-lg shadow-lg flex flex-col items-center justify-center hover:scale-105 transition-transform border-2 border-slate-200"
-          >
-            <div className="text-red-600 text-lg sm:text-xl font-bold">{card.display}</div>
-            <div className="text-red-600 text-xs mt-1">♠</div>
-          </button>
-        ))}
+        {game.cards.map((card, idx) => {
+          const isUsed = game.expression.includes(String(card.value));
+          return (
+            <button
+              key={idx}
+              onClick={() => !isUsed && game.addToExpression(String(card.value))}
+              disabled={isUsed}
+              className={`w-14 h-20 sm:w-16 sm:h-24 rounded-lg shadow-lg flex flex-col items-center justify-center transition-all border-2 ${
+                isUsed 
+                  ? "bg-slate-700 border-slate-600 opacity-50 cursor-not-allowed" 
+                  : "bg-white border-slate-200 hover:scale-105 cursor-pointer"
+              }`}
+            >
+              <div className={`text-lg sm:text-xl font-bold ${isUsed ? "text-slate-500" : "text-red-600"}`}>
+                {card.display}
+              </div>
+              <div className={`text-xs mt-1 ${isUsed ? "text-slate-600" : "text-red-600"}`}>♠</div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 表达式输入 */}
+      {/* 表达式输入 - 实时显示结果 */}
       <div className="bg-slate-800 rounded-lg p-3">
         <div className="text-slate-400 text-xs mb-1">你的答案</div>
         <div className="bg-slate-900 rounded p-2 min-h-[40px] font-mono text-white text-lg">
@@ -97,7 +128,7 @@ export default function Game24Game() {
       </div>
 
       {/* 控制按钮 */}
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-center gap-2 flex-wrap">
         <Button variant="secondary" size="sm" onClick={game.backspace}>
           退格
         </Button>
@@ -107,22 +138,27 @@ export default function Game24Game() {
         <Button variant="primary" size="sm" onClick={game.checkAnswer}>
           验证
         </Button>
-        <Button variant="danger" size="sm" onClick={game.revealHint}>
+        <Button variant="danger" size="sm" onClick={game.getHint}>
           提示
         </Button>
       </div>
 
       {/* 提示 */}
-      {game.showHint && game.hint && (
+      {game.showHintState && game.hint && (
         <div className="bg-slate-800 rounded-lg p-3 text-center">
           <div className="text-slate-400 text-xs mb-1">提示</div>
-          <div className="text-green-400 font-mono">{game.hint}</div>
+          <div className="text-green-400 font-mono text-sm">{game.hint}</div>
         </div>
       )}
 
       {/* 游戏结束 */}
       {(game.isCorrect || game.timeLeft === 0) && (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
+          {game.isCorrect ? (
+            <div className="text-green-400 text-lg font-bold">🎉 正确！+{Math.ceil(game.timeLeft / 10)}分</div>
+          ) : (
+            <div className="text-red-400 text-lg font-bold">⏰ 时间到！</div>
+          )}
           <Button size="lg" onClick={game.startGame}>
             {game.isCorrect ? "下一局" : "再来一局"}
           </Button>
