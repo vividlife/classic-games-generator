@@ -73,6 +73,16 @@ export default function Header() {
           >
             猜数字
           </Link>
+          <Link
+            href="/werewolf"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/werewolf"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            狼人杀
+          </Link>
         </nav>
       </div>
     </header>
