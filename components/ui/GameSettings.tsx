@@ -13,13 +13,13 @@ export default function GameSettings() {
       {/* Player Name */}
       <div>
         <label className="block text-sm font-medium text-slate-400 mb-1.5">
-          Player Name
+          玩家名称
         </label>
         <input
           type="text"
           value={playerName}
           onChange={(e) => setPlayerName(e.target.value.slice(0, 16))}
-          placeholder="Enter your name"
+          placeholder="输入你的名字"
           maxLength={16}
           className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
         />
@@ -28,7 +28,7 @@ export default function GameSettings() {
       {/* Difficulty */}
       <div>
         <label className="block text-sm font-medium text-slate-400 mb-1.5">
-          Difficulty
+          难度
         </label>
         <div className="grid grid-cols-3 gap-2">
           {(Object.keys(DIFFICULTIES) as Difficulty[]).map((d) => (
@@ -50,14 +50,14 @@ export default function GameSettings() {
           ))}
         </div>
         <p className="text-xs text-slate-500 mt-1">
-          Score ×{DIFFICULTIES[difficulty].scoreMultiplier} multiplier
+          得分 ×{DIFFICULTIES[difficulty].scoreMultiplier} 倍数
         </p>
       </div>
 
       {/* Theme */}
       <div>
         <label className="block text-sm font-medium text-slate-400 mb-1.5">
-          Theme
+          主题
         </label>
         <div className="grid grid-cols-2 gap-2">
           {THEMES.map((theme) => (

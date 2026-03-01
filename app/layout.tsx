@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Classic Games",
-  description: "Play Snake and Tetris with multiple themes and difficulty levels",
+  title: "经典游戏",
+  description: "畅玩贪吃蛇和俄罗斯方块，支持多种主题和难度设置",
 };
 
 export default function RootLayout({

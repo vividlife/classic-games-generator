@@ -10,7 +10,7 @@ export default function Header() {
     <header className="border-b border-slate-800 bg-slate-900/95 backdrop-blur sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/" className="font-bold text-lg text-white tracking-tight hover:text-indigo-400 transition-colors">
-          🎮 Classic Games
+          🎮 经典游戏
         </Link>
         <nav className="flex items-center gap-1">
           <Link
@@ -21,7 +21,7 @@ export default function Header() {
                 : "text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
           >
-            Home
+            主页
           </Link>
           <Link
             href="/snake"
@@ -31,7 +31,7 @@ export default function Header() {
                 : "text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
           >
-            Snake
+            贪吃蛇
           </Link>
           <Link
             href="/tetris"
@@ -41,7 +41,7 @@ export default function Header() {
                 : "text-slate-400 hover:text-white hover:bg-slate-800"
             }`}
           >
-            Tetris
+            俄罗斯方块
           </Link>
         </nav>
       </div>

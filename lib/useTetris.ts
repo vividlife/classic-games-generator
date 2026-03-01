@@ -124,6 +124,7 @@ function lockAndSpawn(
     score: state.score + lineScore,
     lines: newLines,
     level: newLevel,
+    status: "playing",
   };
 }
 

@@ -10,7 +10,7 @@ interface ScoreBoardProps {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  return new Date(dateStr).toLocaleDateString("zh-CN", {
     month: "short",
     day: "numeric",
   });
@@ -26,7 +26,7 @@ export default function ScoreBoard({ game, currentScore }: ScoreBoardProps) {
   if (scores.length === 0) {
     return (
       <div className="text-center text-slate-500 py-4 text-sm">
-        No scores yet. Be the first!
+        暂无记录，快来创造第一个吧！
       </div>
     );
   }

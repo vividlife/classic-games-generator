@@ -39,19 +39,19 @@ export interface DifficultyConfig {
 
 export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   easy: {
-    label: "Easy",
+    label: "简单",
     snakeSpeed: 150,
     tetrisSpeed: 800,
     scoreMultiplier: 1,
   },
   medium: {
-    label: "Medium",
+    label: "普通",
     snakeSpeed: 100,
     tetrisSpeed: 500,
     scoreMultiplier: 1.5,
   },
   hard: {
-    label: "Hard",
+    label: "困难",
     snakeSpeed: 60,
     tetrisSpeed: 250,
     scoreMultiplier: 2,
@@ -61,7 +61,7 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
 export const THEMES: Theme[] = [
   {
     id: "classic",
-    name: "Classic",
+    name: "经典",
     background: "bg-gray-900",
     board: "bg-gray-800",
     snake: "bg-green-500",
@@ -82,7 +82,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "neon",
-    name: "Neon",
+    name: "霓虹",
     background: "bg-black",
     board: "bg-gray-950",
     snake: "bg-pink-500",
@@ -103,7 +103,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "forest",
-    name: "Forest",
+    name: "森林",
     background: "bg-green-950",
     board: "bg-green-900",
     snake: "bg-emerald-400",
@@ -124,7 +124,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "ocean",
-    name: "Ocean",
+    name: "海洋",
     background: "bg-blue-950",
     board: "bg-blue-900",
     snake: "bg-sky-400",

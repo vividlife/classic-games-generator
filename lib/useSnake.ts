@@ -5,11 +5,13 @@ import { Direction, Difficulty, GameStatus, Position, DIFFICULTIES } from "@/typ
 import { calculateScore } from "@/lib/scoreManager";
 
 export const GRID_SIZE = 20;
-const INITIAL_SNAKE: Position[] = [
-  { x: 10, y: 10 },
-  { x: 9, y: 10 },
-  { x: 8, y: 10 },
-];
+function createInitialSnake(): Position[] {
+  return [
+    { x: 10, y: 10 },
+    { x: 9, y: 10 },
+    { x: 8, y: 10 },
+  ];
+}
 
 interface SnakeState {
   snake: Position[];
@@ -107,7 +109,7 @@ function snakeReducer(state: SnakeState, action: SnakeAction): SnakeState {
       return { ...state, status: state.status === "paused" ? "playing" : state.status };
 
     case "RESET": {
-      const snake = INITIAL_SNAKE;
+      const snake = createInitialSnake();
       return {
         snake,
         food: randomFood(snake),
@@ -126,7 +128,7 @@ function snakeReducer(state: SnakeState, action: SnakeAction): SnakeState {
 }
 
 function getInitialState(): SnakeState {
-  const snake = INITIAL_SNAKE;
+  const snake = createInitialSnake();
   return {
     snake,
     food: randomFood(snake),
