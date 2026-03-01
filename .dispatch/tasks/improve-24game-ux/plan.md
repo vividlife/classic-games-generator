@@ -8,11 +8,11 @@
 
 ## 优化清单
 
-- [ ] 修改数字范围：只生成 1-9 的数字（去掉 10-13）
-- [ ] 简化输入交互：选择两个数字和一个运算符直接计算结果，逐步简化表达式
+- [x] 修改数字范围：只生成 1-9 的数字（去掉 10-13）- 已完成，generateCards() 使用 1-9
+- [x] 简化输入交互：选择两个数字和一个运算符直接计算结果，逐步简化表达式
   - 点击第一张牌 → 选择运算符 → 点击第二张牌 → 自动计算并生成新数字
-  - 重复直到得到24或无法继续
-- [ ] 添加统一风格的 Header 组件（和其他游戏页面一致）
-- [ ] 本地构建测试 (npm run build) - 必须成功
-- [ ] 提交到 GitHub
-- [ ] 写变更摘要到 .dispatch/tasks/improve-24game-ux/output.md
+  - 重复直到得到24或无法继续 - 已完成，全新 useGame24.ts + Game24Game.tsx
+- [x] 添加统一风格的 Header 组件（和其他游戏页面一致）- 已完成，page.tsx 使用 Header
+- [x] 本地构建测试 (npm run build) - 必须成功 - 构建通过，无 TypeScript 错误
+- [x] 提交到 GitHub - 提交 524032b，已推送到 origin/main
+- [x] 写变更摘要到 .dispatch/tasks/improve-24game-ux/output.md

@@ -63,6 +63,16 @@ export default function Header() {
           >
             24点
           </Link>
+          <Link
+            href="/guess-number"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/guess-number"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            猜数字
+          </Link>
         </nav>
       </div>
     </header>
