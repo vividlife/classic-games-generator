@@ -181,92 +181,137 @@ function gomokuReducer(state: GomokuState, action: GomokuAction): GomokuState {
   }
 }
 
-// ─── AI Logic ────────────────────────────────────────────────────────────────
+// ─── AI Logic (Minimax + Alpha-Beta) ─────────────────────────────────────────
 
-function countInDir(
+const SCORE_FIVE = 100000;
+const SCORE_OPEN_FOUR = 50000;
+const SCORE_HALF_FOUR = 5000;
+const SCORE_OPEN_THREE = 1000;
+const SCORE_HALF_THREE = 200;
+const SCORE_OPEN_TWO = 50;
+const SCORE_HALF_TWO = 5;
+
+const DEPTH_MAP: Record<Difficulty, number> = {
+  easy: 2,
+  medium: 3,
+  hard: 4,
+};
+
+const DIRS: [number, number][] = [
+  [0, 1],
+  [1, 0],
+  [1, 1],
+  [1, -1],
+];
+
+// Count consecutive same-colored stones from (r,c) in one direction (not including origin)
+function countDir(
   board: Stone[][],
-  row: number,
-  col: number,
+  r: number,
+  c: number,
   dr: number,
   dc: number,
   stone: Stone
 ): number {
-  let count = 0;
-  let r = row + dr;
-  let c = col + dc;
+  let n = 0;
+  let nr = r + dr;
+  let nc = c + dc;
   while (
-    r >= 0 &&
-    r < BOARD_SIZE &&
-    c >= 0 &&
-    c < BOARD_SIZE &&
-    board[r][c] === stone
+    nr >= 0 &&
+    nr < BOARD_SIZE &&
+    nc >= 0 &&
+    nc < BOARD_SIZE &&
+    board[nr][nc] === stone
   ) {
-    count++;
-    r += dr;
-    c += dc;
+    n++;
+    nr += dr;
+    nc += dc;
   }
-  return count;
+  return n;
 }
 
-function evaluatePosition(
+// Score the pattern at (r, c) in direction (dr, dc). Stone must already be placed at (r, c).
+function lineScore(
   board: Stone[][],
-  row: number,
-  col: number,
+  r: number,
+  c: number,
+  dr: number,
+  dc: number,
   stone: Stone
 ): number {
-  const tmp = board.map((r) => [...r]);
-  tmp[row][col] = stone;
+  const f = countDir(board, r, c, dr, dc, stone);
+  const b = countDir(board, r, c, -dr, -dc, stone);
+  const len = f + b + 1;
 
-  const directions: [number, number][] = [
-    [0, 1],
-    [1, 0],
-    [1, 1],
-    [1, -1],
-  ];
-  let total = 0;
+  const feR = r + (f + 1) * dr;
+  const feC = c + (f + 1) * dc;
+  const beR = r - (b + 1) * dr;
+  const beC = c - (b + 1) * dc;
 
-  for (const [dr, dc] of directions) {
-    const fwd = countInDir(tmp, row, col, dr, dc, stone);
-    const bwd = countInDir(tmp, row, col, -dr, -dc, stone);
-    const count = fwd + bwd + 1;
+  const fOpen =
+    feR >= 0 &&
+    feR < BOARD_SIZE &&
+    feC >= 0 &&
+    feC < BOARD_SIZE &&
+    board[feR][feC] === null;
+  const bOpen =
+    beR >= 0 &&
+    beR < BOARD_SIZE &&
+    beC >= 0 &&
+    beC < BOARD_SIZE &&
+    board[beR][beC] === null;
+  const opens = (fOpen ? 1 : 0) + (bOpen ? 1 : 0);
 
-    const fr = row + (fwd + 1) * dr;
-    const fc = col + (fwd + 1) * dc;
-    const br = row - (bwd + 1) * dr;
-    const bc = col - (bwd + 1) * dc;
-
-    const fOpen =
-      fr >= 0 &&
-      fr < BOARD_SIZE &&
-      fc >= 0 &&
-      fc < BOARD_SIZE &&
-      tmp[fr][fc] === null;
-    const bOpen =
-      br >= 0 &&
-      br < BOARD_SIZE &&
-      bc >= 0 &&
-      bc < BOARD_SIZE &&
-      tmp[br][bc] === null;
-    const open = (fOpen ? 1 : 0) + (bOpen ? 1 : 0);
-
-    let lineScore = 0;
-    if (count >= 5) lineScore = 100000;
-    else if (count === 4)
-      lineScore = open >= 2 ? 10000 : open === 1 ? 1000 : 100;
-    else if (count === 3)
-      lineScore = open >= 2 ? 1000 : open === 1 ? 100 : 10;
-    else if (count === 2)
-      lineScore = open >= 2 ? 100 : open === 1 ? 10 : 1;
-    else if (count === 1) lineScore = open >= 1 ? 1 : 0;
-
-    total += lineScore;
-  }
-  return total;
+  if (len >= 5) return SCORE_FIVE;
+  if (len === 4)
+    return opens === 2
+      ? SCORE_OPEN_FOUR
+      : opens === 1
+      ? SCORE_HALF_FOUR
+      : 0;
+  if (len === 3)
+    return opens === 2
+      ? SCORE_OPEN_THREE
+      : opens === 1
+      ? SCORE_HALF_THREE
+      : 0;
+  if (len === 2)
+    return opens === 2 ? SCORE_OPEN_TWO : opens === 1 ? SCORE_HALF_TWO : 0;
+  return 0;
 }
 
-function getCandidateCells(
-  board: Stone[][]
-): { row: number; col: number }[] {
+// Sum scores across all 4 directions for a stone already placed at (r, c)
+function cellScore(
+  board: Stone[][],
+  r: number,
+  c: number,
+  stone: Stone
+): number {
+  let s = 0;
+  for (const [dr, dc] of DIRS) s += lineScore(board, r, c, dr, dc, stone);
+  return s;
+}
+
+// Evaluate full board from AI (white/maximizer) perspective
+function evalBoard(
+  board: Stone[][],
+  aiStone: Stone,
+  playerStone: Stone
+): number {
+  let ai = 0;
+  let opp = 0;
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      if (board[r][c] === aiStone) ai += cellScore(board, r, c, aiStone);
+      else if (board[r][c] === playerStone)
+        opp += cellScore(board, r, c, playerStone);
+    }
+  }
+  return ai - opp;
+}
+
+// Candidate moves: empty cells within range=2 of any existing stone
+function getCandidateCells(board: Stone[][]): { row: number; col: number }[] {
   const hasStones = board.some((row) => row.some((c) => c !== null));
   if (!hasStones) {
     const mid = Math.floor(BOARD_SIZE / 2);
@@ -274,12 +319,11 @@ function getCandidateCells(
   }
 
   const seen = new Set<string>();
-  const range = 2;
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       if (board[r][c] !== null) {
-        for (let dr = -range; dr <= range; dr++) {
-          for (let dc = -range; dc <= range; dc++) {
+        for (let dr = -2; dr <= 2; dr++) {
+          for (let dc = -2; dc <= 2; dc++) {
             const nr = r + dr;
             const nc = c + dc;
             if (
@@ -302,38 +346,129 @@ function getCandidateCells(
   });
 }
 
-function getAIMove(
+// Minimax with Alpha-Beta pruning (operates on a mutable board copy)
+function minimax(
   board: Stone[][],
+  depth: number,
+  alpha: number,
+  beta: number,
+  isMax: boolean,
+  aiStone: Stone,
+  playerStone: Stone
+): number {
+  const candidates = getCandidateCells(board);
+  if (depth === 0 || candidates.length === 0)
+    return evalBoard(board, aiStone, playerStone);
+
+  const stone = isMax ? aiStone : playerStone;
+
+  // Order moves by quick score (best first for better pruning), limit branching to 12
+  const ordered = candidates
+    .map((m) => {
+      board[m.row][m.col] = stone;
+      const s = cellScore(board, m.row, m.col, stone);
+      board[m.row][m.col] = null;
+      return { row: m.row, col: m.col, s };
+    })
+    .sort((a, b) => (isMax ? b.s - a.s : a.s - b.s))
+    .slice(0, 12);
+
+  if (isMax) {
+    let best = -Infinity;
+    for (const { row, col } of ordered) {
+      board[row][col] = stone;
+      if (checkWin(board, row, col)) {
+        board[row][col] = null;
+        return SCORE_FIVE * 10;
+      }
+      const s = minimax(board, depth - 1, alpha, beta, false, aiStone, playerStone);
+      board[row][col] = null;
+      best = Math.max(best, s);
+      alpha = Math.max(alpha, s);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const { row, col } of ordered) {
+      board[row][col] = stone;
+      if (checkWin(board, row, col)) {
+        board[row][col] = null;
+        return -SCORE_FIVE * 10;
+      }
+      const s = minimax(board, depth - 1, alpha, beta, true, aiStone, playerStone);
+      board[row][col] = null;
+      best = Math.min(best, s);
+      beta = Math.min(beta, s);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+function getAIMove(
+  boardState: Stone[][],
   difficulty: Difficulty
 ): { row: number; col: number } {
+  const board = boardState.map((r) => [...r]); // mutable copy; never mutate React state
   const aiStone: Stone = "white";
   const playerStone: Stone = "black";
+  const depth = DEPTH_MAP[difficulty];
 
   const candidates = getCandidateCells(board);
   if (candidates.length === 0) return { row: 7, col: 7 };
+  if (candidates.length === 1) return candidates[0];
 
-  if (difficulty === "easy") {
-    return candidates[Math.floor(Math.random() * candidates.length)];
+  // Immediately win if possible
+  for (const { row, col } of candidates) {
+    board[row][col] = aiStone;
+    if (checkWin(board, row, col)) {
+      board[row][col] = null;
+      return { row, col };
+    }
+    board[row][col] = null;
   }
 
-  let bestScore = -1;
-  let bestMoves: { row: number; col: number }[] = [];
-
+  // Block opponent's immediate win
   for (const { row, col } of candidates) {
-    const attack = evaluatePosition(board, row, col, aiStone);
-    const defense = evaluatePosition(board, row, col, playerStone);
-    const noise = difficulty === "medium" ? Math.random() * 60 : 0;
-    const score = attack + defense * 0.9 + noise;
+    board[row][col] = playerStone;
+    if (checkWin(board, row, col)) {
+      board[row][col] = null;
+      return { row, col };
+    }
+    board[row][col] = null;
+  }
 
-    if (score > bestScore) {
-      bestScore = score;
-      bestMoves = [{ row, col }];
-    } else if (score === bestScore) {
-      bestMoves.push({ row, col });
+  // Score candidates, keep top 15 for root search
+  const scored = candidates
+    .map((m) => {
+      board[m.row][m.col] = aiStone;
+      const a = cellScore(board, m.row, m.col, aiStone);
+      board[m.row][m.col] = null;
+      board[m.row][m.col] = playerStone;
+      const p = cellScore(board, m.row, m.col, playerStone);
+      board[m.row][m.col] = null;
+      return { row: m.row, col: m.col, score: a + p };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 15);
+
+  let bestScore = -Infinity;
+  let bestRow = scored[0].row;
+  let bestCol = scored[0].col;
+
+  for (const { row, col } of scored) {
+    board[row][col] = aiStone;
+    const s = minimax(board, depth - 1, -Infinity, Infinity, false, aiStone, playerStone);
+    board[row][col] = null;
+    if (s > bestScore) {
+      bestScore = s;
+      bestRow = row;
+      bestCol = col;
     }
   }
 
-  return bestMoves[Math.floor(Math.random() * bestMoves.length)] ?? candidates[0];
+  return { row: bestRow, col: bestCol };
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -344,26 +479,27 @@ export function useGomoku(difficulty: Difficulty, initialMode: GomokuGameMode = 
   const boardRef = useRef(state.board);
   boardRef.current = state.board;
 
-  // Trigger AI move when it becomes white's turn in PvC mode
+  // Trigger AI move when it becomes white's turn in PvC mode.
+  // NOTE: state.aiThinking is intentionally excluded from deps — including it
+  // causes the effect cleanup to cancel the scheduled timeout the moment
+  // aiThinking becomes true, leaving the AI stuck in a thinking state forever.
   useEffect(() => {
     if (
       state.status === "playing" &&
       state.mode === "pvc" &&
-      state.currentPlayer === "white" &&
-      !state.aiThinking
+      state.currentPlayer === "white"
     ) {
       dispatch({ type: "SET_AI_THINKING", value: true });
-      aiTimeoutRef.current = setTimeout(() => {
+      const timer = setTimeout(() => {
         const move = getAIMove(boardRef.current, difficulty);
         dispatch({ type: "PLACE_STONE", row: move.row, col: move.col });
         dispatch({ type: "SET_AI_THINKING", value: false });
-      }, 350);
+      }, 300);
+      aiTimeoutRef.current = timer;
+      return () => clearTimeout(timer);
     }
-    return () => {
-      if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status, state.mode, state.currentPlayer, state.aiThinking, difficulty]);
+  }, [state.status, state.mode, state.currentPlayer, difficulty]);
 
   const placeStone = useCallback((row: number, col: number) => {
     dispatch({ type: "PLACE_STONE", row, col });

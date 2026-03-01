@@ -185,7 +185,7 @@ export default function GomokuGame() {
           />
 
           {game.status === "gameover" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 rounded">
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/75 rounded">
               <div className="text-4xl mb-3">
                 {game.isDraw ? "🤝" : game.winner === "black" ? "🎉" : "😔"}
               </div>
@@ -201,7 +201,7 @@ export default function GomokuGame() {
                 <p className="text-slate-300 text-sm mb-4">棋盘已满</p>
               )}
               <div className="flex gap-3">
-                <Button onClick={handleReset}>再来一局</Button>
+                <Button onClick={handleStart}>再来一局</Button>
               </div>
             </div>
           )}
