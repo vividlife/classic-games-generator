@@ -53,6 +53,16 @@ export default function Header() {
           >
             五子棋
           </Link>
+          <Link
+            href="/game24"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/game24"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            24点
+          </Link>
         </nav>
       </div>
     </header>
