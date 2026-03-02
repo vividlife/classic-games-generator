@@ -12,7 +12,7 @@ export default function Home() {
             荣升的游戏小站
           </h1>
           <p className="text-slate-400 text-lg">
-            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、数独和推箱子，支持多种主题和难度设置
+            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、数独、推箱子和黑白棋，支持多种主题和难度设置
           </p>
         </div>
 
@@ -206,6 +206,29 @@ export default function Home() {
               </span>
             </div>
             <div className="absolute top-4 right-4 text-slate-600 group-hover:text-amber-500 transition-colors text-xl">
+              →
+            </div>
+          </Link>
+          <Link
+            href="/reversi"
+            className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-teal-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
+          >
+            <div className="text-6xl mb-4">⬛</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-teal-400 transition-colors">
+              黑白棋
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              经典 Othello/Reversi，落子翻转对方棋子，棋子多者获胜！
+            </p>
+            <div className="flex gap-2 text-xs">
+              <span className="bg-teal-900/50 text-teal-300 px-2 py-1 rounded">
+                双人对战
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                落子提示
+              </span>
+            </div>
+            <div className="absolute top-4 right-4 text-slate-600 group-hover:text-teal-500 transition-colors text-xl">
               →
             </div>
           </Link>

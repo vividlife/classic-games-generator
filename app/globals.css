@@ -36,6 +36,17 @@ body {
   opacity: 0.25;
 }
 
+/* Reversi flip animation */
+@keyframes reversi-flip {
+  0%   { transform: scaleX(1); }
+  50%  { transform: scaleX(0); }
+  100% { transform: scaleX(1); }
+}
+
+.reversi-flip {
+  animation: reversi-flip 0.32s ease-in-out;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
