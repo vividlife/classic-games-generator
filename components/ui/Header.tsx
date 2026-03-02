@@ -93,6 +93,46 @@ export default function Header() {
           >
             数独
           </Link>
+          <Link
+            href="/tangram"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/tangram"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            七巧板
+          </Link>
+          <Link
+            href="/hanoi"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/hanoi"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            汉诺塔
+          </Link>
+          <Link
+            href="/circles"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/circles"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            摆圆片
+          </Link>
+          <Link
+            href="/counter"
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/counter"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:text-white hover:bg-slate-800"
+            }`}
+          >
+            拨数读数
+          </Link>
         </nav>
       </div>
     </header>

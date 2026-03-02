@@ -12,7 +12,7 @@ export default function Home() {
             荣升的游戏小站
           </h1>
           <p className="text-slate-400 text-lg">
-            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、数独、推箱子和黑白棋，支持多种主题和难度设置
+            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、数独、推箱子、黑白棋、七巧板、汉诺塔、摆圆片和拨数读数，支持多种主题和难度设置
           </p>
         </div>
 
@@ -229,6 +229,102 @@ export default function Home() {
               </span>
             </div>
             <div className="absolute top-4 right-4 text-slate-600 group-hover:text-teal-500 transition-colors text-xl">
+              →
+            </div>
+          </Link>
+
+          <Link
+            href="/tangram"
+            className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-pink-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
+          >
+            <div className="text-6xl mb-4">🧩</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-pink-400 transition-colors">
+              七巧板
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              巧手拼世界，用七块拼板拼出各种图案，锻炼空间想象力！
+            </p>
+            <div className="flex gap-2 text-xs">
+              <span className="bg-pink-900/50 text-pink-300 px-2 py-1 rounded">
+                空间思维
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                暗牌模式
+              </span>
+            </div>
+            <div className="absolute top-4 right-4 text-slate-600 group-hover:text-pink-500 transition-colors text-xl">
+              →
+            </div>
+          </Link>
+
+          <Link
+            href="/hanoi"
+            className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-orange-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
+          >
+            <div className="text-6xl mb-4">🗼</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-orange-400 transition-colors">
+              汉诺塔
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              乾坤大挪移，将圆盘从一根柱子全部移到另一根，限时60秒！
+            </p>
+            <div className="flex gap-2 text-xs">
+              <span className="bg-orange-900/50 text-orange-300 px-2 py-1 rounded">
+                4环限时
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                逻辑推理
+              </span>
+            </div>
+            <div className="absolute top-4 right-4 text-slate-600 group-hover:text-orange-500 transition-colors text-xl">
+              →
+            </div>
+          </Link>
+
+          <Link
+            href="/circles"
+            className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-sky-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
+          >
+            <div className="text-6xl mb-4">⭕</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-sky-400 transition-colors">
+              摆圆片
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              解锁数关系，抽签获取题目，用圆片摆出指定的数量关系！
+            </p>
+            <div className="flex gap-2 text-xs">
+              <span className="bg-sky-900/50 text-sky-300 px-2 py-1 rounded">
+                数量关系
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                抽签模式
+              </span>
+            </div>
+            <div className="absolute top-4 right-4 text-slate-600 group-hover:text-sky-500 transition-colors text-xl">
+              →
+            </div>
+          </Link>
+
+          <Link
+            href="/counter"
+            className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-lime-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
+          >
+            <div className="text-6xl mb-4">🔢</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-lime-400 transition-colors">
+              拨数读数
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              数感拨拨乐，按要求拨数、读数，支持两位到五位数训练！
+            </p>
+            <div className="flex gap-2 text-xs">
+              <span className="bg-lime-900/50 text-lime-300 px-2 py-1 rounded">
+                数感训练
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                多位数
+              </span>
+            </div>
+            <div className="absolute top-4 right-4 text-slate-600 group-hover:text-lime-500 transition-colors text-xl">
               →
             </div>
           </Link>
