@@ -60,7 +60,7 @@ export default function WerewolfDealer() {
             >
               +
             </button>
-            <span className="text-slate-400 text-sm ml-1">（6 - 18 人）</span>
+            <span className="text-slate-400 text-sm ml-1">（4 - 18 人）</span>
           </div>
         </div>
 
@@ -151,6 +151,7 @@ export default function WerewolfDealer() {
 
   // ─── Dealt Phase ───────────────────────────────────────────────────────────
   const activePlayer = players.find(p => p.id === activePlayerId);
+  const allRevealed = players.length > 0 && players.every(p => p.revealed);
 
   return (
     <div className="max-w-lg mx-auto">
@@ -158,7 +159,11 @@ export default function WerewolfDealer() {
         <div className="text-5xl mb-2">🐺</div>
         <h1 className="text-2xl font-bold text-white">狼人杀发牌工具</h1>
         <p className="text-slate-400 mt-1 text-sm">
-          {globalUnlocked ? "上帝视角已开启" : "点击编号查看自己的身份"}
+          {globalUnlocked 
+            ? "游戏结束 - 上帝视角已开启" 
+            : allRevealed 
+              ? "所有玩家已查看身份，可解锁上帝视角" 
+              : "点击编号查看自己的身份（每人限看一次）"}
         </p>
       </div>
 
@@ -168,11 +173,11 @@ export default function WerewolfDealer() {
           onClick={toggleGlobalUnlock}
           className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
             globalUnlocked
-              ? "bg-amber-600 hover:bg-amber-500 text-white ring-2 ring-amber-400/50"
+              ? "bg-red-600 hover:bg-red-500 text-white ring-2 ring-red-400/50"
               : "bg-slate-700 hover:bg-slate-600 text-slate-300"
           }`}
         >
-          {globalUnlocked ? "🔓 上帝视角" : "🔒 全部解锁"}
+          {globalUnlocked ? "🔓 游戏已结束" : "🔒 解锁上帝视角（结束游戏）"}
         </button>
         <button
           onClick={resetToSetup}
@@ -186,18 +191,29 @@ export default function WerewolfDealer() {
       <div className="grid grid-cols-4 gap-3">
         {players.map(player => {
           const role = ROLES[player.role];
+          const isRevealed = player.revealed;
+          
+          // 已查看但未解锁上帝视角的格子显示锁定状态
+          const isLocked = isRevealed && !globalUnlocked;
+          
           return (
             <button
               key={player.id}
-              onClick={() => !globalUnlocked && revealPlayer(player.id)}
+              onClick={() => !globalUnlocked && !isLocked && revealPlayer(player.id)}
+              disabled={isLocked}
               className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
                 globalUnlocked
                   ? role.team === "狼人"
                     ? "border-red-500/60 bg-red-900/20 cursor-default"
                     : "border-blue-500/40 bg-blue-900/10 cursor-default"
-                  : "border-slate-600 bg-slate-800 hover:border-purple-500/60 hover:bg-slate-700 active:bg-slate-600 cursor-pointer"
+                  : isLocked
+                    ? "border-slate-500/30 bg-slate-700/50 cursor-not-allowed opacity-60"
+                    : "border-slate-600 bg-slate-800 hover:border-purple-500/60 hover:bg-slate-700 active:bg-slate-600 cursor-pointer"
               }`}
             >
+              {isLocked && !globalUnlocked && (
+                <span className="absolute top-1 right-1 text-sm">🔒</span>
+              )}
               <span className="text-xl font-bold text-white leading-none">
                 {player.id}
               </span>
@@ -213,6 +229,9 @@ export default function WerewolfDealer() {
                   </span>
                 </>
               )}
+              {isLocked && !globalUnlocked && (
+                <span className="text-xs text-slate-400 mt-1">已查看</span>
+              )}
             </button>
           );
         })}
@@ -221,6 +240,7 @@ export default function WerewolfDealer() {
       <p className="text-center text-slate-600 text-xs mt-6">
         共 {players.length} 名玩家 ·{" "}
         {players.filter(p => ROLES[p.role].team === "狼人").length} 只狼人
+        {!globalUnlocked && ` · 已查看 ${players.filter(p => p.revealed).length} 人`}
       </p>
 
       {/* Role reveal overlay */}

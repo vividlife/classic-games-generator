@@ -23,6 +23,8 @@ export const ROLES: Record<RoleName, Role> = {
 export type RoleConfig = Partial<Record<RoleName, number>>;
 
 export const PRESET_CONFIGS: Record<number, RoleConfig> = {
+  4:  { 狼人: 1, 预言家: 1, 村民: 2 },
+  5:  { 狼人: 1, 预言家: 1, 女巫: 1, 村民: 2 },
   6:  { 狼人: 2, 预言家: 1, 女巫: 1, 村民: 2 },
   7:  { 狼人: 2, 预言家: 1, 女巫: 1, 猎人: 1, 村民: 2 },
   8:  { 狼人: 2, 预言家: 1, 女巫: 1, 猎人: 1, 村民: 3 },
@@ -41,6 +43,7 @@ export const PRESET_CONFIGS: Record<number, RoleConfig> = {
 export interface Player {
   id: number;
   role: RoleName;
+  revealed: boolean; // 是否已经查看过自己的牌
 }
 
 interface WerewolfState {
@@ -74,15 +77,15 @@ function buildRoleList(config: RoleConfig): RoleName[] {
 export function useWerewolf() {
   const [state, setState] = useState<WerewolfState>(() => ({
     phase: "setup",
-    playerCount: 8,
-    roleConfig: PRESET_CONFIGS[8],
+    playerCount: 4,
+    roleConfig: PRESET_CONFIGS[4],
     players: [],
     activePlayerId: null,
     globalUnlocked: false,
   }));
 
   const setPlayerCount = useCallback((count: number) => {
-    const clamped = Math.min(18, Math.max(6, count));
+    const clamped = Math.min(18, Math.max(4, count));
     setState(prev => ({
       ...prev,
       playerCount: clamped,
@@ -112,6 +115,7 @@ export function useWerewolf() {
       const players: Player[] = roleList.map((role, i) => ({
         id: i + 1,
         role,
+        revealed: false,
       }));
 
       return {
@@ -125,10 +129,21 @@ export function useWerewolf() {
   }, []);
 
   const revealPlayer = useCallback((playerId: number) => {
-    setState(prev => ({
-      ...prev,
-      activePlayerId: prev.activePlayerId === playerId ? null : playerId,
-    }));
+    setState(prev => {
+      // 如果该玩家已经查看过，不允许再次查看
+      const player = prev.players.find(p => p.id === playerId);
+      if (!player || player.revealed) {
+        return prev;
+      }
+      // 标记为已查看并显示
+      return {
+        ...prev,
+        players: prev.players.map(p =>
+          p.id === playerId ? { ...p, revealed: true } : p
+        ),
+        activePlayerId: playerId,
+      };
+    });
   }, []);
 
   const hideActive = useCallback(() => {
