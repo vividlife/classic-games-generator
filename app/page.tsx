@@ -12,7 +12,7 @@ export default function Home() {
             荣升的游戏小站
           </h1>
           <p className="text-slate-400 text-lg">
-            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、数独、推箱子、黑白棋、七巧板、汉诺塔、摆圆片和拨数读数，支持多种主题和难度设置
+            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、数独、推箱子、黑白棋、围棋、七巧板、汉诺塔、摆圆片和拨数读数，支持多种主题和难度设置
           </p>
         </div>
 
@@ -229,6 +229,30 @@ export default function Home() {
               </span>
             </div>
             <div className="absolute top-4 right-4 text-slate-600 group-hover:text-teal-500 transition-colors text-xl">
+              →
+            </div>
+          </Link>
+
+          <Link
+            href="/go"
+            className="group relative bg-slate-800 rounded-2xl p-8 border border-slate-700 hover:border-stone-400/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer"
+          >
+            <div className="text-6xl mb-4">⚫</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-stone-300 transition-colors">
+              围棋
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">
+              经典围棋双人对战，提子、打劫、禁入点，支持9×9、13×13、19×19！
+            </p>
+            <div className="flex gap-2 text-xs">
+              <span className="bg-stone-900/50 text-stone-300 px-2 py-1 rounded">
+                双人对战
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded">
+                三种棋盘
+              </span>
+            </div>
+            <div className="absolute top-4 right-4 text-slate-600 group-hover:text-stone-400 transition-colors text-xl">
               →
             </div>
           </Link>
