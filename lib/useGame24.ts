@@ -9,6 +9,7 @@ export interface NumberCard {
 }
 
 export type GameStep = "select1" | "selectOp" | "select2";
+export type DifficultyLevel = "easy" | "medium" | "hard";
 
 let cardIdCounter = 0;
 
@@ -21,9 +22,45 @@ function makeCard(value: number): NumberCard {
   return { id: cardIdCounter++, value, display: formatDisplay(value) };
 }
 
-function generateCards(): NumberCard[] {
+interface DifficultyConfig {
+  minNumber: number;
+  maxNumber: number;
+  allowDivision: boolean;
+  minSolutionSteps: number;
+  maxSolutionSteps: number;
+}
+
+const DIFFICULTY_CONFIGS: Record<DifficultyLevel, DifficultyConfig> = {
+  easy: {
+    minNumber: 1,
+    maxNumber: 6,
+    allowDivision: false,
+    minSolutionSteps: 2,
+    maxSolutionSteps: 2,
+  },
+  medium: {
+    minNumber: 1,
+    maxNumber: 9,
+    allowDivision: true,
+    minSolutionSteps: 2,
+    maxSolutionSteps: 3,
+  },
+  hard: {
+    minNumber: 1,
+    maxNumber: 13,
+    allowDivision: true,
+    minSolutionSteps: 3,
+    maxSolutionSteps: 3,
+  },
+};
+
+function generateCards(difficulty: DifficultyLevel): NumberCard[] {
+  const config = DIFFICULTY_CONFIGS[difficulty];
   return Array.from({ length: 4 }, () =>
-    makeCard(Math.floor(Math.random() * 9) + 1)
+    makeCard(
+      Math.floor(Math.random() * (config.maxNumber - config.minNumber + 1)) +
+        config.minNumber
+    )
   );
 }
 
@@ -103,15 +140,37 @@ export function useGame24() {
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [hint, setHint] = useState<string | null>(null);
   const [solution, setSolution] = useState<SolutionStep[] | null>(null);
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>("medium");
 
   const startGame = useCallback(() => {
-    let newCards = generateCards();
+    const config = DIFFICULTY_CONFIGS[difficulty];
+    let newCards = generateCards(difficulty);
     let foundSolution = null;
-    while (true) {
+    let attempts = 0;
+    const maxAttempts = 1000;
+    
+    while (attempts < maxAttempts) {
       foundSolution = findSolution(newCards.map((c) => c.value));
-      if (foundSolution !== null) break;
-      newCards = generateCards();
+      if (
+        foundSolution !== null &&
+        foundSolution.length >= config.minSolutionSteps &&
+        foundSolution.length <= config.maxSolutionSteps
+      ) {
+        break;
+      }
+      newCards = generateCards(difficulty);
+      attempts++;
     }
+    
+    // 如果找不到符合条件的，就用有解的
+    if (foundSolution === null) {
+      while (true) {
+        foundSolution = findSolution(newCards.map((c) => c.value));
+        if (foundSolution !== null) break;
+        newCards = generateCards(difficulty);
+      }
+    }
+    
     setCards(newCards);
     setSolution(foundSolution);
     setSelectedIndex(null);
@@ -122,7 +181,7 @@ export function useGame24() {
     setIsGameOver(false);
     setHint(null);
     setGamesPlayed((n) => n + 1);
-  }, []);
+  }, [difficulty]);
 
   const selectCard = useCallback(
     (idx: number) => {
@@ -193,6 +252,10 @@ export function useGame24() {
     setHint(`提示：试试 ${step.a} ${step.op} ${step.b}`);
   }, [solution]);
 
+  const setDifficulty = useCallback((newDifficulty: DifficultyLevel) => {
+    setDifficulty(newDifficulty);
+  }, []);
+
   return {
     cards,
     selectedIndex,
@@ -204,10 +267,12 @@ export function useGame24() {
     gamesPlayed,
     hint,
     solution,
+    difficulty,
     startGame,
     selectCard,
     selectOp,
     cancelSelection,
     showHint,
+    setDifficulty,
   };
 }

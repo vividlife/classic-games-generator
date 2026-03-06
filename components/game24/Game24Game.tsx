@@ -1,6 +1,6 @@
 "use client";
 
-import { useGame24 } from "@/lib/useGame24";
+import { useGame24, type DifficultyLevel } from "@/lib/useGame24";
 import Button from "@/components/ui/Button";
 
 const OPERATORS = ["+", "-", "×", "÷"];
@@ -10,6 +10,12 @@ const STEP_HINTS: Record<string, string> = {
   selectOp: "第二步：选择运算符",
   select2: "第三步：选择第二张牌",
 };
+
+const DIFFICULTIES: { level: DifficultyLevel; label: string; color: string }[] = [
+  { level: "easy", label: "简单", color: "bg-green-600" },
+  { level: "medium", label: "中等", color: "bg-yellow-600" },
+  { level: "hard", label: "困难", color: "bg-red-600" },
+];
 
 export default function Game24Game() {
   const game = useGame24();
@@ -23,6 +29,23 @@ export default function Game24Game() {
           <p className="text-slate-400 text-xs sm:text-sm">
             使用四张牌通过加减乘除运算得到 24
           </p>
+        </div>
+
+        {/* 难度选择 */}
+        <div className="flex gap-2">
+          {DIFFICULTIES.map(({ level, label, color }) => (
+            <button
+              key={level}
+              onClick={() => game.setDifficulty!(level)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                game.difficulty === level
+                  ? `${color} text-white`
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         <Button size="lg" onClick={game.startGame}>
@@ -48,6 +71,26 @@ export default function Game24Game() {
 
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-sm mx-auto px-4 py-4">
+      {/* 难度显示和切换 */}
+      <div className="flex items-center gap-2">
+        <span className="text-slate-400 text-sm">难度：</span>
+        {DIFFICULTIES.map(({ level, label, color }) => (
+          <button
+            key={level}
+            onClick={() => {
+              game.setDifficulty!(level);
+            }}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+              game.difficulty === level
+                ? `${color} text-white`
+                : "bg-slate-700 text-slate-400 hover:bg-slate-600"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* 步骤提示 */}
       {!game.isGameOver && (
         <div className="text-slate-300 text-sm font-medium bg-slate-800/60 px-4 py-2 rounded-full">
