@@ -131,6 +131,11 @@ export default function Game24Game() {
               取消选择
             </Button>
           )}
+        {!game.isGameOver && (
+          <Button variant="secondary" size="sm" onClick={game.showHint}>
+            💡 提示
+          </Button>
+        )}
         <Button
           variant={game.isGameOver ? "primary" : "secondary"}
           size="sm"
@@ -139,6 +144,13 @@ export default function Game24Game() {
           重新开始
         </Button>
       </div>
+
+      {/* 提示显示 */}
+      {game.hint && (
+        <div className="bg-yellow-900/40 text-yellow-400 text-sm font-medium text-center px-4 py-2 rounded-lg">
+          {game.hint}
+        </div>
+      )}
 
       {/* 进度信息 */}
       {!game.isGameOver && (

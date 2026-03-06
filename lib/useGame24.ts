@@ -45,6 +45,43 @@ function canMake24(values: number[]): boolean {
   return false;
 }
 
+interface SolutionStep {
+  a: number;
+  b: number;
+  op: string;
+  result: number;
+}
+
+function findSolution(values: number[]): SolutionStep[] | null {
+  if (values.length === 1) {
+    return Math.abs(values[0] - 24) < 0.0001 ? [] : null;
+  }
+
+  for (let i = 0; i < values.length; i++) {
+    for (let j = 0; j < values.length; j++) {
+      if (i === j) continue;
+      const rest = values.filter((_, k) => k !== i && k !== j);
+      const a = values[i];
+      const b = values[j];
+      
+      const ops = [
+        { op: "+", result: a + b },
+        { op: "-", result: a - b },
+        { op: "×", result: a * b },
+        ...(b !== 0 ? [{ op: "÷", result: a / b }] : [])
+      ];
+
+      for (const { op, result } of ops) {
+        const subSolution = findSolution([result, ...rest]);
+        if (subSolution !== null) {
+          return [{ a, b, op, result }, ...subSolution];
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function applyOp(a: number, op: string, b: number): number | null {
   switch (op) {
     case "+": return a + b;
@@ -64,19 +101,26 @@ export function useGame24() {
   const [isWon, setIsWon] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
   const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [hint, setHint] = useState<string | null>(null);
+  const [solution, setSolution] = useState<SolutionStep[] | null>(null);
 
   const startGame = useCallback(() => {
     let newCards = generateCards();
-    while (!canMake24(newCards.map((c) => c.value))) {
+    let foundSolution = null;
+    while (true) {
+      foundSolution = findSolution(newCards.map((c) => c.value));
+      if (foundSolution !== null) break;
       newCards = generateCards();
     }
     setCards(newCards);
+    setSolution(foundSolution);
     setSelectedIndex(null);
     setSelectedOp(null);
     setStep("select1");
     setMessage(null);
     setIsWon(false);
     setIsGameOver(false);
+    setHint(null);
     setGamesPlayed((n) => n + 1);
   }, []);
 
@@ -140,6 +184,15 @@ export function useGame24() {
     setMessage(null);
   }, []);
 
+  const showHint = useCallback(() => {
+    if (!solution || solution.length === 0) {
+      setHint("暂无提示");
+      return;
+    }
+    const step = solution[0];
+    setHint(`提示：试试 ${step.a} ${step.op} ${step.b}`);
+  }, [solution]);
+
   return {
     cards,
     selectedIndex,
@@ -149,9 +202,12 @@ export function useGame24() {
     isWon,
     isGameOver,
     gamesPlayed,
+    hint,
+    solution,
     startGame,
     selectCard,
     selectOp,
     cancelSelection,
+    showHint,
   };
 }
