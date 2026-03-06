@@ -252,10 +252,6 @@ export function useGame24() {
     setHint(`提示：试试 ${step.a} ${step.op} ${step.b}`);
   }, [solution]);
 
-  const setDifficulty = useCallback((newDifficulty: DifficultyLevel) => {
-    setDifficulty(newDifficulty);
-  }, []);
-
   return {
     cards,
     selectedIndex,
