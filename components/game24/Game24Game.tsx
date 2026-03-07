@@ -15,7 +15,15 @@ const DIFFICULTIES: { level: DifficultyLevel; label: string; color: string }[] =
   { level: "easy", label: "简单", color: "bg-green-600" },
   { level: "medium", label: "中等", color: "bg-yellow-600" },
   { level: "hard", label: "困难", color: "bg-red-600" },
+  { level: "expert", label: "极难", color: "bg-fuchsia-700" },
 ];
+
+const DIFFICULTY_RULES: Record<DifficultyLevel, string> = {
+  easy: "数字范围 1-6，仅使用 + - ×，中间结果保持整数",
+  medium: "数字范围 1-9，可使用 + - × ÷",
+  hard: "数字范围 1-13，解法中至少包含一次除法",
+  expert: "数字范围 2-13，解法中包含除法且出现小数中间结果",
+};
 
 export default function Game24Game() {
   const game = useGame24();
@@ -53,7 +61,8 @@ export default function Game24Game() {
         </Button>
 
         <div className="bg-slate-800/60 rounded-xl p-4 text-xs text-slate-400 max-w-xs text-center space-y-1">
-          <p>每局随机 4 张牌（数字 1-9）</p>
+          <p>每局随机 4 张牌（随难度调整范围）</p>
+          <p>{DIFFICULTY_RULES[game.difficulty]}</p>
           <p>点击第一张牌 → 选运算符 → 点击第二张牌</p>
           <p>自动计算结果，重复直到只剩一张牌</p>
           <p>最终结果等于 24 即为胜利</p>
@@ -199,6 +208,37 @@ export default function Game24Game() {
       {!game.isGameOver && (
         <div className="text-slate-500 text-xs">
           剩余 {game.cards.length} 张牌 · 第 {game.gamesPlayed} 局
+        </div>
+      )}
+
+      {game.puzzleScore !== null && game.solutionCount !== null && (
+        <div className="w-full bg-slate-800/60 rounded-xl px-4 py-3 text-xs space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">当前局评分</span>
+            <span className="text-slate-200 font-semibold">
+              {game.puzzleScore} / 8
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">目标分桶</span>
+            <span className="text-slate-300">
+              {game.targetScoreRange[0]}-{game.targetScoreRange[1]}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">解法数（估计）</span>
+            <span className="text-slate-300">{game.solutionCount}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-slate-400">分桶命中</span>
+            <span
+              className={
+                game.bucketMatched ? "text-green-400 font-medium" : "text-yellow-400 font-medium"
+              }
+            >
+              {game.bucketMatched ? "是" : "否（已降级可解）"}
+            </span>
+          </div>
         </div>
       )}
     </div>
