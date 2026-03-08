@@ -19,7 +19,6 @@ export default function WerewolfDealer() {
     dayCount,
     winner,
     allDeaths,
-    votes,
     votedOutPlayerId,
     setPlayerCount,
     setRoleConfig,
@@ -34,9 +33,7 @@ export default function WerewolfDealer() {
     witchUseSave,
     nextNight,
     endGameManually,
-    startVoting,
-    castVote,
-    finishVoteResult,
+    voteOutPlayer,
   } = useWerewolf();
 
   const adjustRole = (role: RoleName, delta: number) => {
@@ -450,260 +447,20 @@ export default function WerewolfDealer() {
 
   // ─── Day Phase ───────────────────────────────────────────────────────
   if (phase === "day") {
+    const alivePlayers = players.filter(p => p.alive);
+    const votedOutPlayer = votedOutPlayerId ? players.find(p => p.id === votedOutPlayerId) : null;
+
     return (
       <div className="max-w-lg mx-auto">
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">☀️</div>
           <h1 className="text-2xl font-bold text-white">第 {dayCount} 天</h1>
-          <p className="text-yellow-400 mt-2 text-lg font-semibold">天亮了</p>
-        </div>
-
-        {/* Death announcement */}
-        <div className={`rounded-2xl p-6 mb-6 text-center border ${
-          nightDeaths.length > 0
-            ? "bg-red-900/30 border-red-500/40"
-            : "bg-green-900/30 border-green-500/40"
-        }`}>
-          {nightDeaths.length > 0 ? (
-            <>
-              <p className="text-red-300 text-sm mb-3">昨晚</p>
-              <div className="flex gap-3 justify-center flex-wrap">
-                {nightDeaths.map(id => {
-                  const player = players.find(p => p.id === id);
-                  return player ? (
-                    <div key={id} className="text-center">
-                      <div className="text-5xl mb-1">💀</div>
-                      <div className="text-2xl font-bold text-white">{id}号玩家</div>
-                      <div className="text-lg">{ROLES[player.role].emoji} {player.role}</div>
-                    </div>
-                  ) : null;
-                })}
-              </div>
-              <p className="text-red-300 text-sm mt-4">死亡</p>
-            </>
-          ) : (
-            <>
-              <div className="text-5xl mb-2">🎉</div>
-              <p className="text-green-300 text-lg font-semibold">昨晚是平安夜</p>
-              <p className="text-green-400 text-sm mt-2">没有人死亡</p>
-            </>
-          )}
-        </div>
-
-        {/* Alive players */}
-        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-6">
-          <p className="text-slate-400 text-sm mb-3">存活玩家：</p>
-          <div className="flex gap-2 flex-wrap">
-            {players.filter(p => p.alive).map(p => (
-              <span key={p.id} className="px-3 py-2 bg-slate-700 text-white rounded-lg">
-                {p.id}号 {ROLES[p.role].emoji}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            onClick={startVoting}
-            className="py-4 rounded-2xl bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-lg transition-all"
-          >
-            🗳️ 开始投票
-          </button>
-          <button
-            onClick={() => endGameManually()}
-            className="py-4 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg transition-all"
-          >
-            🏁 结束游戏
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Day Voting Phase ───────────────────────────────────────────────────────
-  if (phase === "day_voting") {
-    const alivePlayers = players.filter(p => p.alive);
-    const votedPlayerIds = Object.keys(votes).map(id => parseInt(id));
-    const currentVoterId = alivePlayers.find(p => !votedPlayerIds.includes(p.id))?.id ?? null;
-
-    // 计算票数统计（用于显示）
-    const voteCounts: Record<number, number> = {};
-    alivePlayers.forEach(p => {
-      const target = votes[p.id];
-      if (target !== null && target !== undefined) {
-        voteCounts[target] = (voteCounts[target] || 0) + 1;
-      }
-    });
-
-    return (
-      <div className="max-w-lg mx-auto">
-        <div className="text-center mb-6">
-          <div className="text-5xl mb-2">🗳️</div>
-          <h1 className="text-2xl font-bold text-white">第 {dayCount} 天 - 投票</h1>
           <p className="text-yellow-400 mt-2 text-lg font-semibold">
-            {currentVoterId ? `${currentVoterId}号玩家请投票` : "投票进行中..."}
-          </p>
-          <p className="text-slate-400 mt-1 text-sm">
-            已投票: {votedPlayerIds.length} / {alivePlayers.length}
+            {votedOutPlayer ? "投票结果" : "天亮了"}
           </p>
         </div>
 
-        {/* Vote progress */}
-        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-4">
-          <div className="flex gap-2 flex-wrap">
-            {alivePlayers.map(p => (
-              <span
-                key={p.id}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  votedPlayerIds.includes(p.id)
-                    ? "bg-green-900/50 text-green-300"
-                    : "bg-slate-700 text-slate-400"
-                }`}
-              >
-                {p.id}号 {votedPlayerIds.includes(p.id) ? "✓" : "…"}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Player grid - select who to vote out */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          {players.map(player => {
-            const role = ROLES[player.role];
-            const canSelect = player.alive && currentVoterId !== null;
-            const currentVotes = voteCounts[player.id] || 0;
-
-            return (
-              <button
-                key={player.id}
-                onClick={() => canSelect && castVote(currentVoterId!, player.id)}
-                disabled={!canSelect}
-                className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
-                  !player.alive
-                    ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
-                    : "border-yellow-500/40 bg-yellow-900/20 hover:bg-yellow-800/40 hover:border-yellow-400 cursor-pointer"
-                }`}
-              >
-                {!player.alive && <span className="absolute top-1 right-1 text-sm">💀</span>}
-                <span className="text-xl font-bold text-white leading-none">{player.id}</span>
-                {player.alive && currentVotes > 0 && (
-                  <span className="text-xs text-yellow-300 mt-0.5">{currentVotes}票</span>
-                )}
-                {player.alive && currentVotes === 0 && (
-                  <span className="text-xs text-yellow-300/60 mt-0.5">0票</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Abstain button */}
-        {currentVoterId && (
-          <button
-            onClick={() => castVote(currentVoterId, null)}
-            className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold text-sm transition-all mb-4"
-          >
-            🙅 弃权
-          </button>
-        )}
-
-        <button
-          onClick={() => endGameManually()}
-          className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
-        >
-          🏁 结束游戏
-        </button>
-      </div>
-    );
-  }
-
-  // ─── Day Vote Result Phase ───────────────────────────────────────────────────────
-  if (phase === "day_vote_result") {
-    const alivePlayers = players.filter(p => p.alive);
-
-    // 计算票数统计
-    const voteCounts: Record<number, number> = {};
-    alivePlayers.forEach(p => {
-      const target = votes[p.id];
-      if (target !== null && target !== undefined) {
-        voteCounts[target] = (voteCounts[target] || 0) + 1;
-      }
-    });
-
-    // 按票数排序
-    const sortedByVotes = Object.entries(voteCounts)
-      .map(([idStr, count]) => ({ id: parseInt(idStr), count }))
-      .sort((a, b) => b.count - a.count);
-
-    const votedOutPlayer = votedOutPlayerId ? players.find(p => p.id === votedOutPlayerId) : null;
-    const isTie = votedOutPlayerId === null && sortedByVotes.length > 0;
-
-    return (
-      <div className="max-w-lg mx-auto">
-        <div className="text-center mb-6">
-          <div className="text-5xl mb-2">📊</div>
-          <h1 className="text-2xl font-bold text-white">第 {dayCount} 天 - 投票结果</h1>
-          <p className="text-yellow-400 mt-2 text-lg font-semibold">
-            {votedOutPlayer ? `${votedOutPlayer.id}号玩家被投出局` : isTie ? "平票，无人出局" : "无人投票"}
-          </p>
-        </div>
-
-        {/* Vote count details */}
-        <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4">投票详情</h2>
-          <div className="space-y-3">
-            {alivePlayers.map(voter => {
-              const targetId = votes[voter.id];
-              const targetPlayer = targetId !== null && targetId !== undefined
-                ? players.find(p => p.id === targetId)
-                : null;
-              return (
-                <div key={voter.id} className="flex items-center justify-between bg-slate-700/50 rounded-xl p-3">
-                  <span className="text-white">
-                    {voter.id}号
-                  </span>
-                  <span className="text-slate-400">
-                    → {targetPlayer ? `${targetPlayer.id}号` : "弃权"}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Vote count summary */}
-        {sortedByVotes.length > 0 && (
-          <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-6">
-            <h2 className="text-lg font-semibold text-white mb-4">票数统计</h2>
-            <div className="space-y-2">
-              {sortedByVotes.map(({ id, count }) => {
-                const player = players.find(p => p.id === id);
-                const isVotedOut = id === votedOutPlayerId;
-                return (
-                  <div
-                    key={id}
-                    className={`flex items-center justify-between rounded-xl p-3 ${
-                      isVotedOut
-                        ? "bg-red-900/30 border border-red-500/40"
-                        : "bg-slate-700/50"
-                    }`}
-                  >
-                    <span className="text-white flex items-center gap-2">
-                      {id}号 {player && ROLES[player.role].emoji}
-                      {isVotedOut && <span className="text-red-300 text-sm">(出局)</span>}
-                    </span>
-                    <span className={`font-bold ${isVotedOut ? "text-red-300" : "text-yellow-300"}`}>
-                      {count}票
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Voted out player reveal */}
+        {/* 如果已投票，显示结果 */}
         {votedOutPlayer && (
           <div className="bg-red-900/30 border border-red-500/40 rounded-2xl p-6 mb-6 text-center">
             <p className="text-red-300 text-sm mb-3">被投出局的是</p>
@@ -713,13 +470,102 @@ export default function WerewolfDealer() {
           </div>
         )}
 
-        {/* Continue button */}
-        <button
-          onClick={finishVoteResult}
-          className="w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all"
-        >
-          {votedOutPlayer ? "🌙 入夜" : "🌙 继续"}
-        </button>
+        {/* 如果还没投票，显示死亡公告和投票选项 */}
+        {!votedOutPlayer && (
+          <>
+            {/* Death announcement */}
+            <div className={`rounded-2xl p-6 mb-6 text-center border ${
+              nightDeaths.length > 0
+                ? "bg-red-900/30 border-red-500/40"
+                : "bg-green-900/30 border-green-500/40"
+            }`}>
+              {nightDeaths.length > 0 ? (
+                <>
+                  <p className="text-red-300 text-sm mb-3">昨晚</p>
+                  <div className="flex gap-3 justify-center flex-wrap">
+                    {nightDeaths.map(id => {
+                      const player = players.find(p => p.id === id);
+                      return player ? (
+                        <div key={id} className="text-center">
+                          <div className="text-5xl mb-1">💀</div>
+                          <div className="text-2xl font-bold text-white">{id}号玩家</div>
+                          <div className="text-lg">{ROLES[player.role].emoji} {player.role}</div>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                  <p className="text-red-300 text-sm mt-4">死亡</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-5xl mb-2">🎉</div>
+                  <p className="text-green-300 text-lg font-semibold">昨晚是平安夜</p>
+                  <p className="text-green-400 text-sm mt-2">没有人死亡</p>
+                </>
+              )}
+            </div>
+
+            {/* Alive players */}
+            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-6">
+              <p className="text-slate-400 text-sm mb-3">存活玩家：</p>
+              <div className="flex gap-2 flex-wrap">
+                {alivePlayers.map(p => (
+                  <span key={p.id} className="px-3 py-2 bg-slate-700 text-white rounded-lg">
+                    {p.id}号 {ROLES[p.role].emoji}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* 简化投票 - 选择被投出局的玩家 */}
+            <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-6">
+              <p className="text-yellow-400 text-sm mb-3 font-semibold">投票：选择今天被投出局的玩家</p>
+              <div className="grid grid-cols-4 gap-3">
+                {alivePlayers.map(player => {
+                  const role = ROLES[player.role];
+                  return (
+                    <button
+                      key={player.id}
+                      onClick={() => voteOutPlayer(player.id)}
+                      className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none
+                        border-yellow-500/40 bg-yellow-900/20 hover:bg-yellow-800/40 hover:border-yellow-400 cursor-pointer
+                      `}
+                    >
+                      <span className="text-xl font-bold text-white leading-none">{player.id}</span>
+                      <span className="text-xs text-yellow-300 mt-0.5">投出局</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 无人出局按钮 */}
+            <button
+              onClick={() => voteOutPlayer(null)}
+              className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold text-sm transition-all mb-4"
+            >
+              🙅 无人出局
+            </button>
+          </>
+        )}
+
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-4">
+          {votedOutPlayer && (
+            <button
+              onClick={nextNight}
+              className="py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all"
+            >
+              🌙 进入下一夜
+            </button>
+          )}
+          <button
+            onClick={() => endGameManually()}
+            className={`py-4 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg transition-all ${votedOutPlayer ? '' : 'col-span-2'}`}
+          >
+            🏁 结束游戏
+          </button>
+        </div>
       </div>
     );
   }

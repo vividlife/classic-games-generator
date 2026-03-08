@@ -47,7 +47,7 @@ export interface Player {
   alive: boolean; // 是否存活
 }
 
-export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day" | "day_voting" | "day_vote_result" | "game_over";
+export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day" | "game_over";
 
 interface WerewolfState {
   phase: GamePhase;
@@ -63,8 +63,6 @@ interface WerewolfState {
   dayCount: number; // 第几天
   winner: "狼人" | "好人" | null; // 游戏胜利方
   allDeaths: number[]; // 所有死亡的玩家记录
-  // 投票相关状态
-  votes: Record<number, number | null>; // key: 投票玩家id, value: 被投玩家id或null(弃权)
   votedOutPlayerId: number | null; // 被投票出局的玩家id
 }
 
@@ -102,7 +100,6 @@ export function useWerewolf() {
     dayCount: 1,
     winner: null,
     allDeaths: [],
-    votes: {},
     votedOutPlayerId: null,
   }));
 
@@ -154,7 +151,6 @@ export function useWerewolf() {
         dayCount: 1,
         winner: null,
         allDeaths: [],
-        votes: {},
         votedOutPlayerId: null,
       };
     });
@@ -204,7 +200,6 @@ export function useWerewolf() {
       dayCount: 1,
       winner: null,
       allDeaths: [],
-      votes: {},
       votedOutPlayerId: null,
     }));
   }, []);
@@ -292,101 +287,49 @@ export function useWerewolf() {
     });
   }, [checkGameEnd]);
 
-  // 进入下一夜
+  // 进入下一夜，自动检查游戏是否结束
   const nextNight = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      phase: "night_werewolf",
-      nightKillTarget: null,
-      witchSaved: false,
-      nightDeaths: [],
-      dayCount: prev.dayCount + 1,
-      votes: {},
-      votedOutPlayerId: null,
-    }));
-  }, []);
-
-  // 开始投票
-  const startVoting = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      phase: "day_voting",
-      votes: {},
-      votedOutPlayerId: null,
-    }));
-  }, []);
-
-  // 玩家投票 (targetId为null表示弃权)
-  const castVote = useCallback((voterId: number, targetId: number | null) => {
     setState(prev => {
-      const newVotes = { ...prev.votes, [voterId]: targetId };
-      const alivePlayers = prev.players.filter(p => p.alive);
-      const allVoted = alivePlayers.every(p => newVotes[p.id] !== undefined);
-
-      // 如果所有人都投完票了，计算结果
-      if (allVoted) {
-        // 统计票数
-        const voteCounts: Record<number, number> = {};
-        alivePlayers.forEach(p => {
-          const target = newVotes[p.id];
-          if (target !== null) {
-            voteCounts[target] = (voteCounts[target] || 0) + 1;
-          }
-        });
-
-        // 找出最高票
-        let maxVotes = 0;
-        let votedOutId: number | null = null;
-        let tie = false;
-
-        Object.entries(voteCounts).forEach(([idStr, count]) => {
-          const id = parseInt(idStr);
-          if (count > maxVotes) {
-            maxVotes = count;
-            votedOutId = id;
-            tie = false;
-          } else if (count === maxVotes) {
-            tie = true;
-          }
-        });
-
-        // 平票时无人出局
-        if (tie) {
-          votedOutId = null;
-        }
-
+      // 检查游戏是否结束
+      const winner = checkGameEnd(prev.players);
+      if (winner) {
         return {
           ...prev,
-          votes: newVotes,
-          votedOutPlayerId: votedOutId,
-          phase: "day_vote_result",
+          phase: "game_over",
+          winner,
+          globalUnlocked: true,
         };
       }
 
       return {
         ...prev,
-        votes: newVotes,
+        phase: "night_werewolf",
+        nightKillTarget: null,
+        witchSaved: false,
+        nightDeaths: [],
+        dayCount: prev.dayCount + 1,
+        votedOutPlayerId: null,
       };
     });
-  }, []);
+  }, [checkGameEnd]);
 
-  // 完成投票结果处理，处决玩家并进入下一夜或游戏结束
-  const finishVoteResult = useCallback(() => {
+  // 简化投票：直接处决玩家或选择无人出局
+  const voteOutPlayer = useCallback((targetId: number | null) => {
     setState(prev => {
       let newPlayers = prev.players;
       let newAllDeaths = prev.allDeaths;
 
       // 如果有被投出局的玩家
-      if (prev.votedOutPlayerId) {
+      if (targetId) {
         newPlayers = prev.players.map(p =>
-          p.id === prev.votedOutPlayerId ? { ...p, alive: false } : p
+          p.id === targetId ? { ...p, alive: false } : p
         );
-        newAllDeaths = [...prev.allDeaths, prev.votedOutPlayerId];
+        newAllDeaths = [...prev.allDeaths, targetId];
       }
 
       // 检查游戏是否结束
       const winner = checkGameEnd(newPlayers);
-      const newPhase = winner ? "game_over" : "night_werewolf";
+      const newPhase = winner ? "game_over" : "day";
 
       return {
         ...prev,
@@ -395,12 +338,7 @@ export function useWerewolf() {
         winner,
         phase: newPhase,
         globalUnlocked: winner ? true : prev.globalUnlocked,
-        nightKillTarget: null,
-        witchSaved: false,
-        nightDeaths: [],
-        dayCount: winner ? prev.dayCount : prev.dayCount + 1,
-        votes: {},
-        votedOutPlayerId: null,
+        votedOutPlayerId: targetId,
       };
     });
   }, [checkGameEnd]);
@@ -426,8 +364,6 @@ export function useWerewolf() {
     witchUseSave,
     nextNight,
     endGameManually,
-    startVoting,
-    castVote,
-    finishVoteResult,
+    voteOutPlayer,
   };
 }
