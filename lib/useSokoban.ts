@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { Direction, GameStatus, Difficulty } from "@/types";
-import { canSolveLevel, generateRandomLevel } from "./sokobanUtils";
+import { canSolveLevel, solveLevel, generateRandomLevel } from "./sokobanUtils";
 
 // Cell types
 export const WALL = "#";
@@ -21,102 +21,102 @@ export const LEVELS: { name: string; map: string[] }[] = [
   {
     name: "第1关 - 入门",
     map: [
-      "  ##### ",
-      "###   # ",
-      "# $ $ # ",
-      "# # # # ",
-      "# . . # ",
-      "#   @ # ",
-      " #####  ",
+      " ##### ",
+      "##   # ",
+      "# $ # ",
+      "# . # ",
+      "# @ # ",
+      "##### ",
     ],
   },
   {
     name: "第2关 - 推一推",
     map: [
-      "#####   ",
-      "#   #   ",
-      "# $ #   ",
-      "#   # ##",
-      "##  # .#",
-      " # $  .#",
-      " # @  # ",
-      " ###### ",
+      "  ##### ",
+      "###   # ",
+      "# $   # ",
+      "#   # # ",
+      "# $ . # ",
+      "# @ . # ",
+      " #####  ",
     ],
   },
   {
     name: "第3关 - 转角",
     map: [
-      "  ##### ",
-      "###   # ",
-      "# $   # ",
-      "# # # ##",
-      "# . $@ #",
-      "### .  #",
-      "  ##### ",
+      " #####   ",
+      "##  ##   ",
+      "#   #    ",
+      "# $ #    ",
+      "#   ## # ",
+      "# $  . # ",
+      "# @  . # ",
+      " #####   ",
     ],
   },
   {
     name: "第4关 - 迷宫",
     map: [
-      " ######  ",
-      "#  . #  ",
-      "# $   # ",
-      "#  . #  ",
-      "## ###  ",
-      " #  $ # ",
-      " # @  # ",
-      " ###### ",
+      "  #####  ",
+      "###   #  ",
+      "# $ $ #  ",
+      "#   # ## ",
+      "# .   #  ",
+      "# . # #  ",
+      "# @   #  ",
+      " #####   ",
     ],
   },
   {
     name: "第5关 - 挑战",
     map: [
       "  ###### ",
-      "  #    # ",
-      "  # ## # ",
-      "### $  # ",
-      "#  $ $@# ",
-      "# ..# ## ",
-      "####     ",
+      "###    # ",
+      "# $  $ # ",
+      "#   ## # ",
+      "#  .   # ",
+      "#  .@  # ",
+      "###  ### ",
+      " ######  ",
     ],
   },
   {
     name: "第6关 - 进阶",
     map: [
-      " ######  ",
-      "##  #  # ",
-      "# $  $ # ",
-      "# . #   #",
-      "# . # $ #",
-      "##  #  ##",
-      " #  @ #  ",
-      " ######  ",
+      " ######   ",
+      "##    #   ",
+      "#  $  #   ",
+      "# $## ##  ",
+      "#   .  #  ",
+      "#  .  @#  ",
+      "##    ##  ",
+      " ######   ",
     ],
   },
   {
     name: "第7关 - 困难",
     map: [
-      " ######  ",
-      "##    ## ",
-      "#  ##  # ",
-      "# $  $ # ",
-      "# .##   #",
-      "# .  $ # ",
-      "##  @  # ",
-      " ######  ",
+      "  #####   ",
+      "###   #   ",
+      "# $ $ #   ",
+      "#   # ### ",
+      "# .   #   ",
+      "# . # #   ",
+      "#   @ #   ",
+      " #####    ",
     ],
   },
   {
     name: "第8关 - 专家",
     map: [
-      "  ###### ",
-      "###    # ",
-      "# $  $ # ",
-      "# . ## ##",
-      "# .  $  #",
-      "##  $  # ",
-      " #  @  # ",
-      " ######  ",
+      " #######  ",
+      "##     ## ",
+      "#  $ $  # ",
+      "#  ###  # ",
+      "#  . .  # ",
+      "#   #   # ",
+      "#   @   # ",
+      "#######   ",
     ],
   },
 ];
@@ -139,6 +139,12 @@ interface SokobanState {
   pushes: number;
   status: GameStatus;
   history: { player: Position; boxes: Position[] }[];
+  // Solver related
+  solution: string[] | null;
+  solutionStep: number;
+  isSolving: boolean;
+  solveError: string | null;
+  showHint: boolean;
 }
 
 type SokobanAction =
@@ -149,7 +155,13 @@ type SokobanAction =
   | { type: "SET_MODE"; mode: GameMode }
   | { type: "SET_DIFFICULTY"; difficulty: Difficulty }
   | { type: "GENERATE_RANDOM_LEVEL"; levelData: { name: string; map: string[] } }
-  | { type: "NEXT_RANDOM_LEVEL"; levelData: { name: string; map: string[] } };
+  | { type: "NEXT_RANDOM_LEVEL"; levelData: { name: string; map: string[] } }
+  | { type: "START_SOLVING" }
+  | { type: "SET_SOLUTION"; solution: string[] | null }
+  | { type: "SET_SOLVE_ERROR"; error: string }
+  | { type: "STEP_SOLUTION" }
+  | { type: "CLEAR_SOLUTION" }
+  | { type: "TOGGLE_HINT" };
 
 function parseLevel(levelData: string[]): {
   map: string[];
@@ -232,6 +244,11 @@ function getInitialState(mode: GameMode = "classic", difficulty: Difficulty = "e
     pushes: 0,
     status: "idle",
     history: [],
+    solution: null,
+    solutionStep: 0,
+    isSolving: false,
+    solveError: null,
+    showHint: false,
   };
 }
 
@@ -368,6 +385,103 @@ function sokobanReducer(state: SokobanState, action: SokobanAction): SokobanStat
       return newState;
     }
 
+    case "START_SOLVING":
+      return {
+        ...state,
+        isSolving: true,
+        solveError: null,
+      };
+
+    case "SET_SOLUTION":
+      return {
+        ...state,
+        isSolving: false,
+        solution: action.solution,
+        solutionStep: 0,
+      };
+
+    case "SET_SOLVE_ERROR":
+      return {
+        ...state,
+        isSolving: false,
+        solveError: action.error,
+      };
+
+    case "STEP_SOLUTION": {
+      if (!state.solution || state.solutionStep >= state.solution.length) {
+        return state;
+      }
+      const nextDirection = state.solution[state.solutionStep] as Direction;
+      const delta: Record<Direction, Position> = {
+        UP: { x: 0, y: -1 },
+        DOWN: { x: 0, y: 1 },
+        LEFT: { x: -1, y: 0 },
+        RIGHT: { x: 1, y: 0 },
+      };
+
+      const dx = delta[nextDirection].x;
+      const dy = delta[nextDirection].y;
+      const newX = state.player.x + dx;
+      const newY = state.player.y + dy;
+
+      if (isWall(state.map, newX, newY)) return state;
+
+      const boxIndex = getBoxAt(state.boxes, newX, newY);
+
+      if (boxIndex !== -1) {
+        const newBoxX = newX + dx;
+        const newBoxY = newY + dy;
+
+        if (isWall(state.map, newBoxX, newBoxY)) return state;
+        if (getBoxAt(state.boxes, newBoxX, newBoxY) !== -1) return state;
+
+        const newBoxes = [...state.boxes];
+        newBoxes[boxIndex] = { x: newBoxX, y: newBoxY };
+        const complete = isLevelComplete(newBoxes, state.goals);
+
+        return {
+          ...state,
+          player: { x: newX, y: newY },
+          boxes: newBoxes,
+          moves: state.moves + 1,
+          pushes: state.pushes + 1,
+          status: complete ? "gameover" : "playing",
+          solutionStep: state.solutionStep + 1,
+          history: [
+            ...state.history,
+            { player: state.player, boxes: state.boxes },
+          ],
+        };
+      }
+
+      return {
+        ...state,
+        player: { x: newX, y: newY },
+        moves: state.moves + 1,
+        status: state.status === "idle" ? "playing" : state.status,
+        solutionStep: state.solutionStep + 1,
+        history: [
+          ...state.history,
+          { player: state.player, boxes: state.boxes },
+        ],
+      };
+    }
+
+    case "CLEAR_SOLUTION":
+      return {
+        ...state,
+        solution: null,
+        solutionStep: 0,
+        solveError: null,
+        showHint: false,
+      };
+
+    case "TOGGLE_HINT":
+      return {
+        ...state,
+        showHint: !state.showHint,
+      };
+
     default:
       return state;
   }
@@ -380,6 +494,14 @@ export function useSokoban() {
   const [state, dispatch] = useReducer(sokobanReducer, undefined, () =>
     getInitialState("classic", "easy", 0, [])
   );
+
+  // Get current level map for solving
+  const getCurrentLevelMap = useCallback(() => {
+    const levelData = state.mode === "random" && state.customLevels.length > 0
+      ? state.customLevels[state.level]
+      : LEVELS[state.level];
+    return levelData?.map || LEVELS[0].map;
+  }, [state.mode, state.level, state.customLevels]);
 
   // Keyboard controls
   useEffect(() => {
@@ -483,9 +605,82 @@ export function useSokoban() {
     dispatch({ type: "RESET" });
   }, []);
 
+  // Solver functions
+  const findSolution = useCallback(async () => {
+    dispatch({ type: "START_SOLVING" });
+    try {
+      const levelMap = getCurrentLevelMap();
+      const solution = solveLevel(levelMap, 200000);
+      dispatch({ type: "SET_SOLUTION", solution });
+    } catch (e) {
+      dispatch({ type: "SET_SOLVE_ERROR", error: "求解失败" });
+    }
+  }, [getCurrentLevelMap]);
+
+  const stepSolution = useCallback(() => {
+    dispatch({ type: "STEP_SOLUTION" });
+  }, []);
+
+  const clearSolution = useCallback(() => {
+    dispatch({ type: "CLEAR_SOLUTION" });
+  }, []);
+
+  const toggleHint = useCallback(() => {
+    dispatch({ type: "TOGGLE_HINT" });
+  }, []);
+
+  // Auto-play solution
+  const [autoPlayInterval, setAutoPlayInterval] = useState<NodeJS.Timeout | null>(null);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+
+  const startAutoPlay = useCallback(() => {
+    if (!state.solution || state.solutionStep >= state.solution.length) return;
+
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+    }
+
+    const interval = setInterval(() => {
+      dispatch({ type: "STEP_SOLUTION" });
+    }, 300);
+
+    setAutoPlayInterval(interval);
+    setIsAutoPlaying(true);
+  }, [state.solution, state.solutionStep, autoPlayInterval]);
+
+  const stopAutoPlay = useCallback(() => {
+    if (autoPlayInterval) {
+      clearInterval(autoPlayInterval);
+      setAutoPlayInterval(null);
+      setIsAutoPlaying(false);
+    }
+  }, [autoPlayInterval]);
+
+  useEffect(() => {
+    if (state.status === "gameover" || (state.solution && state.solutionStep >= state.solution.length)) {
+      stopAutoPlay();
+    }
+  }, [state.status, state.solution, state.solutionStep, stopAutoPlay]);
+
+  useEffect(() => {
+    return () => {
+      if (autoPlayInterval) {
+        clearInterval(autoPlayInterval);
+      }
+    };
+  }, [autoPlayInterval]);
+
   const currentLevelData = state.mode === "random" && state.customLevels.length > 0
     ? state.customLevels[state.level]
     : LEVELS[state.level];
+
+  // Direction display names
+  const directionNames: Record<string, string> = {
+    UP: "↑",
+    DOWN: "↓",
+    LEFT: "←",
+    RIGHT: "→",
+  };
 
   return {
     ...state,
@@ -502,5 +697,14 @@ export function useSokoban() {
     generateError,
     totalLevels: state.mode === "random" ? state.customLevels.length : LEVELS.length,
     levelName: currentLevelData?.name || `第${state.level + 1}关`,
+    // Solver related
+    findSolution,
+    stepSolution,
+    clearSolution,
+    toggleHint,
+    startAutoPlay,
+    stopAutoPlay,
+    isAutoPlaying,
+    directionNames,
   };
 }

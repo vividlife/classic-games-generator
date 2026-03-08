@@ -233,12 +233,13 @@ function calculateFrozenAreas(
   return frozen;
 }
 
-// 简化版求解器，只判断是否有解
-export function canSolveLevel(
-  levelMap: string[],
-  maxSteps: number = 100000
-): boolean {
-  // 解析关卡
+// 解析关卡地图
+function parseLevelMap(levelMap: string[]): {
+  boxes: Position[];
+  goals: Position[];
+  player: Position;
+  map: string[];
+} {
   const boxes: Position[] = [];
   const goals: Position[] = [];
   let player: Position = { x: 0, y: 0 };
@@ -289,7 +290,29 @@ export function canSolveLevel(
     map.push(mapRow);
   });
 
-  // 检查初始状态
+  return { boxes, goals, player, map };
+}
+
+// 从求解状态回溯获取移动步骤
+function getSolutionSteps(finalState: SolverState): string[] {
+  const steps: string[] = [];
+  let current: SolverState | null = finalState;
+
+  while (current && current.lastMove) {
+    steps.unshift(current.lastMove);
+    current = current.parent;
+  }
+
+  return steps;
+}
+
+// 完整求解器，返回解决步骤
+export function solveLevel(
+  levelMap: string[],
+  maxSteps: number = 200000
+): string[] | null {
+  const { boxes, goals, player, map } = parseLevelMap(levelMap);
+
   const initialState: SolverState = {
     player,
     boxes,
@@ -303,11 +326,9 @@ export function canSolveLevel(
     return goals.every((goal) => stateBoxes.some((box) => posEq(box, goal)));
   };
 
-  if (isComplete(boxes)) return true;
+  if (isComplete(boxes)) return [];
 
-  // 计算死区
   const frozenAreas = calculateFrozenAreas(map, goals);
-
   const queue: SolverState[] = [initialState];
   const visited = new Set<string>();
   visited.add(stateKey(player, boxes));
@@ -334,7 +355,6 @@ export function canSolveLevel(
       const boxIndex = getBoxAt(current.boxes, newX, newY);
 
       if (boxIndex !== -1) {
-        // 推箱子
         const newBoxX = newX + dx;
         const newBoxY = newY + dy;
 
@@ -344,7 +364,6 @@ export function canSolveLevel(
         const newBoxes = [...current.boxes];
         newBoxes[boxIndex] = { x: newBoxX, y: newBoxY };
 
-        // 检查死锁
         if (isSimpleDeadlock(map, goals, newBoxes[boxIndex])) continue;
         if (frozenAreas.has(posHash(newBoxes[boxIndex]))) continue;
 
@@ -352,7 +371,16 @@ export function canSolveLevel(
         if (visited.has(key)) continue;
         visited.add(key);
 
-        if (isComplete(newBoxes)) return true;
+        if (isComplete(newBoxes)) {
+          return getSolutionSteps({
+            player: { x: newX, y: newY },
+            boxes: newBoxes,
+            moves: current.moves + 1,
+            pushes: current.pushes + 1,
+            parent: current,
+            lastMove: dir,
+          });
+        }
 
         queue.push({
           player: { x: newX, y: newY },
@@ -363,7 +391,6 @@ export function canSolveLevel(
           lastMove: dir,
         });
       } else {
-        // 单纯移动
         const key = stateKey({ x: newX, y: newY }, current.boxes);
         if (visited.has(key)) continue;
         visited.add(key);
@@ -380,7 +407,16 @@ export function canSolveLevel(
     }
   }
 
-  return false;
+  return null;
+}
+
+// 简化版求解器，只判断是否有解
+export function canSolveLevel(
+  levelMap: string[],
+  maxSteps: number = 100000
+): boolean {
+  const solution = solveLevel(levelMap, maxSteps);
+  return solution !== null;
 }
 
 // ==========================================

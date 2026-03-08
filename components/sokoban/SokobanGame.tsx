@@ -172,6 +172,156 @@ export default function SokobanGame() {
           </Button>
         </div>
 
+        {/* Solver Section */}
+        <div className="bg-slate-800 rounded-xl p-4">
+          <div className="text-xs text-slate-400 uppercase tracking-wider mb-3">自动求解</div>
+          <div className="flex flex-col gap-2">
+            {!game.solution ? (
+              <Button
+                size="sm"
+                onClick={game.findSolution}
+                disabled={game.isSolving}
+              >
+                {game.isSolving ? "求解中..." : "🧩 求解关卡"}
+              </Button>
+            ) : (
+              <>
+                <div className="text-sm text-slate-300 mb-2">
+                  找到解法！共 {game.solution.length} 步
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={game.stepSolution}
+                    disabled={game.solutionStep >= game.solution.length || game.status === "gameover"}
+                  >
+                    下一步
+                  </Button>
+                  {game.isAutoPlaying ? (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={game.stopAutoPlay}
+                    >
+                      暂停
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={game.startAutoPlay}
+                      disabled={game.solutionStep >= game.solution.length || game.status === "gameover"}
+                    >
+                      ▶ 自动演示
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    game.stopAutoPlay();
+                    game.clearSolution();
+                  }}
+                >
+                  清除解法
+                </Button>
+              </>
+            )}
+            {game.solveError && (
+              <p className="text-red-400 text-xs mt-2">{game.solveError}</p>
+            )}
+          </div>
+
+          {/* Direction Color Legend */}
+          {game.solution && (
+            <div className="mt-3 pt-3 border-t border-slate-700">
+              <div className="text-xs text-slate-400 mb-2">方向颜色</div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded bg-red-500 flex items-center justify-center text-white font-bold">↑</span>
+                  <span className="text-slate-300">上 (红)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded bg-blue-500 flex items-center justify-center text-white font-bold">↓</span>
+                  <span className="text-slate-300">下 (蓝)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded bg-green-500 flex items-center justify-center text-white font-bold">←</span>
+                  <span className="text-slate-300">左 (绿)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded bg-yellow-500 flex items-center justify-center text-white font-bold">→</span>
+                  <span className="text-slate-300">右 (黄)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Hint Button */}
+          <div className="mt-3 pt-3 border-t border-slate-700">
+            <Button
+              size="sm"
+              variant={game.showHint && game.solution ? "primary" : "secondary"}
+              onClick={() => {
+                if (!game.solution && !game.isSolving) {
+                  game.findSolution();
+                }
+                game.toggleHint();
+              }}
+            >
+              💡 {game.showHint ? "隐藏提示" : "显示提示"}
+            </Button>
+            {game.showHint && game.solution && game.solutionStep < game.solution.length && (
+              <div className="mt-2 p-2 bg-slate-700 rounded text-center">
+                <div className="text-xs text-slate-400">下一步</div>
+                <div className={`text-2xl font-bold ${
+                  game.solution[game.solutionStep] === 'UP' ? 'text-red-400' :
+                  game.solution[game.solutionStep] === 'DOWN' ? 'text-blue-400' :
+                  game.solution[game.solutionStep] === 'LEFT' ? 'text-green-400' :
+                  'text-yellow-400'
+                }`}>
+                  {game.directionNames[game.solution[game.solutionStep]]}
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  进度: {game.solutionStep + 1} / {game.solution.length}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Solution Steps Display */}
+          {game.solution && game.solution.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-slate-700">
+              <div className="text-xs text-slate-400 mb-2">求解步骤</div>
+              <div className="bg-slate-900 rounded p-2 max-h-24 overflow-y-auto">
+                <div className="font-mono text-xs flex flex-wrap gap-1">
+                  {game.solution.map((step, idx) => (
+                    <span
+                      key={idx}
+                      className={`w-6 h-6 rounded flex items-center justify-center font-bold ${
+                        idx < game.solutionStep
+                          ? "bg-green-600 text-white"
+                          : idx === game.solutionStep
+                          ? "bg-amber-500 text-white animate-pulse"
+                          : step === 'UP'
+                          ? "bg-red-500 text-white"
+                          : step === 'DOWN'
+                          ? "bg-blue-500 text-white"
+                          : step === 'LEFT'
+                          ? "bg-green-500 text-white"
+                          : "bg-yellow-500 text-white"
+                      }`}
+                    >
+                      {game.directionNames[step]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Mobile Controls */}
         <div className="lg:hidden bg-slate-800 rounded-xl p-4">
           <div className="text-xs text-slate-400 uppercase tracking-wider mb-3 text-center">
