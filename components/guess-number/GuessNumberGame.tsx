@@ -48,7 +48,7 @@ export default function GuessNumberGame() {
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-4 w-full max-w-md mx-auto px-2 sm:px-4">
+    <div className="flex flex-col gap-2 sm:gap-3 w-full max-w-md mx-auto px-2 sm:px-4">
       {/* 返回按钮 */}
       <div className="w-full">
         <Link
@@ -61,8 +61,8 @@ export default function GuessNumberGame() {
 
       {/* 标题 */}
       <div className="text-center">
-        <div className="text-3xl sm:text-4xl mb-1">🔢</div>
-        <h2 className="text-lg sm:text-xl font-bold text-white">猜数字</h2>
+        <div className="text-2xl sm:text-3xl mb-1">🔢</div>
+        <h2 className="text-base sm:text-lg font-bold text-white">猜数字</h2>
       </div>
 
       {/* 状态栏 */}
@@ -73,14 +73,40 @@ export default function GuessNumberGame() {
         </div>
       </div>
 
+      {/* 猜测历史 - 移到上方并增大显示区域 */}
+      {game.guesses.length > 0 && (
+        <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+          <div className="text-slate-300 text-sm font-medium mb-3 flex items-center gap-2">
+            <span>📋</span>
+            <span>猜测记录</span>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {game.guesses.map((g, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between bg-slate-900/80 rounded-lg px-4 py-3 border border-slate-700/50"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-500 text-sm font-mono w-6">#{game.guesses.length - idx}</span>
+                  <span className="font-mono text-white text-xl tracking-wider">{g.guess}</span>
+                </div>
+                <span className={`font-bold text-lg ${g.a === 4 ? "text-green-400" : "text-yellow-400"}`}>
+                  {g.a}A{g.b}B
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 当前输入 */}
-      <div className="bg-slate-800 rounded-lg p-4">
+      <div className="bg-slate-800 rounded-lg p-3 sm:p-4">
         <div className="text-slate-400 text-xs mb-2 text-center">输入4位不重复数字</div>
         <div className="flex justify-center gap-2">
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className="w-12 h-14 sm:w-14 sm:h-16 bg-slate-900 rounded-lg flex items-center justify-center text-2xl sm:text-3xl font-mono font-bold text-white border-2 border-slate-700"
+              className="w-11 h-13 sm:w-13 sm:h-15 bg-slate-900 rounded-lg flex items-center justify-center text-xl sm:text-2xl font-mono font-bold text-white border-2 border-slate-700"
             >
               {game.currentGuess[i] || ""}
             </div>
@@ -102,7 +128,7 @@ export default function GuessNumberGame() {
               key={digit}
               onClick={() => !isUsed && game.inputDigit(String(digit))}
               disabled={isUsed || game.currentGuess.length >= 4}
-              className={`h-12 sm:h-14 rounded-lg font-bold text-lg transition-all ${
+              className={`h-11 sm:h-13 rounded-lg font-bold text-lg transition-all ${
                 isUsed
                   ? "bg-slate-700 text-slate-500 cursor-not-allowed"
                   : "bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95"
@@ -131,26 +157,6 @@ export default function GuessNumberGame() {
           确认
         </Button>
       </div>
-
-      {/* 猜测历史 */}
-      {game.guesses.length > 0 && (
-        <div className="bg-slate-800 rounded-lg p-3">
-          <div className="text-slate-400 text-xs mb-2">猜测记录</div>
-          <div className="space-y-1 max-h-40 overflow-y-auto">
-            {game.guesses.map((g, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between bg-slate-900 rounded px-3 py-1.5"
-              >
-                <span className="font-mono text-white">{g.guess}</span>
-                <span className={`font-bold ${g.a === 4 ? "text-green-400" : "text-yellow-400"}`}>
-                  {g.a}A{g.b}B
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 胜利提示 */}
       {game.isWon && (
