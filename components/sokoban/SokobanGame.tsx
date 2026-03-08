@@ -1,6 +1,7 @@
 "use client";
 
-import { useSokoban, LEVELS } from "@/lib/useSokoban";
+import { useSokoban, LEVELS, GameMode } from "@/lib/useSokoban";
+import { Difficulty } from "@/types";
 import SokobanBoard from "./SokobanBoard";
 import Button from "@/components/ui/Button";
 
@@ -11,6 +12,35 @@ export default function SokobanGame() {
     <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
       {/* Game Board */}
       <div className="flex flex-col items-center gap-4">
+        {/* Mode Selector */}
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={() => game.setMode("classic")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              game.mode === "classic"
+                ? "bg-amber-600 text-white"
+                : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+            }`}
+          >
+            经典模式
+          </button>
+          <button
+            onClick={() => {
+              game.setMode("random");
+              if (game.customLevels.length === 0) {
+                game.generateLevel();
+              }
+            }}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              game.mode === "random"
+                ? "bg-amber-600 text-white"
+                : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+            }`}
+          >
+            随机模式
+          </button>
+        </div>
+
         <SokobanBoard
           map={game.map}
           player={game.player}
@@ -27,9 +57,14 @@ export default function SokobanGame() {
               步数: {game.moves} · 推箱: {game.pushes}
             </p>
             <div className="flex gap-2 justify-center">
-              {game.level < game.totalLevels - 1 && (
+              {game.mode === "classic" && game.level < game.totalLevels - 1 && (
                 <Button onClick={() => game.setLevel(game.level + 1)}>
                   下一关
+                </Button>
+              )}
+              {game.mode === "random" && (
+                <Button onClick={game.nextRandomLevel} disabled={game.isGenerating}>
+                  {game.isGenerating ? "生成中..." : "下一关"}
                 </Button>
               )}
               <Button variant="secondary" onClick={game.reset}>
@@ -42,25 +77,60 @@ export default function SokobanGame() {
 
       {/* Sidebar */}
       <div className="flex flex-col gap-4 w-full lg:w-64">
-        {/* Level Select */}
-        <div className="bg-slate-800 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-slate-300 mb-3">选择关卡</h3>
-          <div className="grid grid-cols-4 gap-1">
-            {LEVELS.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => game.setLevel(idx)}
-                className={`p-2 rounded text-sm font-medium transition-colors ${
-                  game.level === idx
-                    ? "bg-amber-600 text-white"
-                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                }`}
-              >
-                {idx + 1}
-              </button>
-            ))}
+        {/* Difficulty Selector (for random mode) */}
+        {game.mode === "random" && (
+          <div className="bg-slate-800 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-slate-300 mb-3">选择难度</h3>
+            <div className="flex flex-col gap-2">
+              {(["easy", "medium", "hard"] as Difficulty[]).map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() => game.setDifficulty(diff)}
+                  className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                    game.difficulty === diff
+                      ? "bg-amber-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  {diff === "easy" ? "简单" : diff === "medium" ? "中等" : "困难"}
+                </button>
+              ))}
+            </div>
+            <Button
+              className="mt-3 w-full"
+              size="sm"
+              onClick={game.generateLevel}
+              disabled={game.isGenerating}
+            >
+              {game.isGenerating ? "生成中..." : "生成新关卡"}
+            </Button>
+            {game.generateError && (
+              <p className="text-red-400 text-xs mt-2">{game.generateError}</p>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* Level Select (for classic mode) */}
+        {game.mode === "classic" && (
+          <div className="bg-slate-800 rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-slate-300 mb-3">选择关卡</h3>
+            <div className="grid grid-cols-4 gap-1">
+              {LEVELS.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => game.setLevel(idx)}
+                  className={`p-2 rounded text-sm font-medium transition-colors ${
+                    game.level === idx
+                      ? "bg-amber-600 text-white"
+                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="bg-slate-800 rounded-xl p-4 space-y-3">

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useReducer } from "react";
-import { Direction, GameStatus } from "@/types";
+import { useCallback, useEffect, useReducer, useState } from "react";
+import { Direction, GameStatus, Difficulty } from "@/types";
+import { canSolveLevel, generateRandomLevel } from "./sokobanUtils";
 
 // Cell types
 export const WALL = "#";
@@ -11,6 +12,8 @@ export const BOX = "$";
 export const PLAYER = "@";
 export const BOX_ON_GOAL = "*";
 export const PLAYER_ON_GOAL = "+";
+
+export type GameMode = "classic" | "random";
 
 // Level data - classic Sokoban levels
 export const LEVELS: { name: string; map: string[] }[] = [
@@ -125,7 +128,10 @@ export interface Position {
 }
 
 interface SokobanState {
+  mode: GameMode;
+  difficulty: Difficulty;
   level: number;
+  customLevels: { name: string; map: string[] }[];
   map: string[];
   player: Position;
   boxes: Position[];
@@ -140,7 +146,11 @@ type SokobanAction =
   | { type: "MOVE"; direction: Direction }
   | { type: "UNDO" }
   | { type: "RESET" }
-  | { type: "SET_LEVEL"; level: number };
+  | { type: "SET_LEVEL"; level: number }
+  | { type: "SET_MODE"; mode: GameMode }
+  | { type: "SET_DIFFICULTY"; difficulty: Difficulty }
+  | { type: "GENERATE_RANDOM_LEVEL"; levelData: { name: string; map: string[] } }
+  | { type: "NEXT_RANDOM_LEVEL"; levelData: { name: string; map: string[] } };
 
 function parseLevel(levelData: string[]): {
   map: string[];
@@ -201,12 +211,20 @@ function parseLevel(levelData: string[]): {
   return { map, player, boxes, goals };
 }
 
-function getInitialState(level: number): SokobanState {
-  const levelData = LEVELS[level]?.map || LEVELS[0].map;
+function getInitialState(mode: GameMode = "classic", difficulty: Difficulty = "easy", level: number = 0, customLevels: { name: string; map: string[] }[] = []): SokobanState {
+  let levelData: string[];
+  if (mode === "random" && customLevels.length > 0) {
+    levelData = customLevels[level]?.map || customLevels[0]?.map || LEVELS[0].map;
+  } else {
+    levelData = LEVELS[level]?.map || LEVELS[0].map;
+  }
   const { map, player, boxes, goals } = parseLevel(levelData);
 
   return {
+    mode,
+    difficulty,
     level,
+    customLevels,
     map,
     player,
     boxes,
@@ -314,10 +332,42 @@ function sokobanReducer(state: SokobanState, action: SokobanAction): SokobanStat
     }
 
     case "RESET":
-      return getInitialState(state.level);
+      return getInitialState(state.mode, state.difficulty, state.level, state.customLevels);
 
     case "SET_LEVEL":
-      return getInitialState(action.level);
+      return getInitialState(state.mode, state.difficulty, action.level, state.customLevels);
+
+    case "SET_MODE": {
+      const newMode = action.mode;
+      if (newMode === "classic") {
+        return getInitialState(newMode, state.difficulty, 0, []);
+      } else {
+        return {
+          ...state,
+          mode: newMode,
+          status: "idle",
+        };
+      }
+    }
+
+    case "SET_DIFFICULTY":
+      return {
+        ...state,
+        difficulty: action.difficulty,
+      };
+
+    case "GENERATE_RANDOM_LEVEL": {
+      const newCustomLevels = [action.levelData];
+      const newState = getInitialState(state.mode, state.difficulty, 0, newCustomLevels);
+      return newState;
+    }
+
+    case "NEXT_RANDOM_LEVEL": {
+      const newCustomLevels = [...state.customLevels, action.levelData];
+      const newLevel = newCustomLevels.length - 1;
+      const newState = getInitialState(state.mode, state.difficulty, newLevel, newCustomLevels);
+      return newState;
+    }
 
     default:
       return state;
@@ -325,8 +375,11 @@ function sokobanReducer(state: SokobanState, action: SokobanAction): SokobanStat
 }
 
 export function useSokoban() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
   const [state, dispatch] = useReducer(sokobanReducer, undefined, () =>
-    getInitialState(0)
+    getInitialState("classic", "easy", 0, [])
   );
 
   // Keyboard controls
@@ -385,9 +438,55 @@ export function useSokoban() {
     dispatch({ type: "SET_LEVEL", level });
   }, []);
 
+  const setMode = useCallback((mode: GameMode) => {
+    dispatch({ type: "SET_MODE", mode });
+  }, []);
+
+  const setDifficulty = useCallback((difficulty: Difficulty) => {
+    dispatch({ type: "SET_DIFFICULTY", difficulty });
+  }, []);
+
+  const generateLevel = useCallback(async () => {
+    setIsGenerating(true);
+    setGenerateError(null);
+    try {
+      const levelData = generateRandomLevel(state.difficulty);
+      if (levelData) {
+        dispatch({ type: "GENERATE_RANDOM_LEVEL", levelData });
+      } else {
+        setGenerateError("生成关卡失败，请重试");
+      }
+    } catch (e) {
+      setGenerateError("生成关卡时出错");
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [state.difficulty]);
+
+  const nextRandomLevel = useCallback(async () => {
+    setIsGenerating(true);
+    setGenerateError(null);
+    try {
+      const levelData = generateRandomLevel(state.difficulty);
+      if (levelData) {
+        dispatch({ type: "NEXT_RANDOM_LEVEL", levelData });
+      } else {
+        setGenerateError("生成关卡失败，请重试");
+      }
+    } catch (e) {
+      setGenerateError("生成关卡时出错");
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [state.difficulty]);
+
   const start = useCallback(() => {
     dispatch({ type: "RESET" });
   }, []);
+
+  const currentLevelData = state.mode === "random" && state.customLevels.length > 0
+    ? state.customLevels[state.level]
+    : LEVELS[state.level];
 
   return {
     ...state,
@@ -396,7 +495,13 @@ export function useSokoban() {
     reset,
     setLevel,
     start,
-    totalLevels: LEVELS.length,
-    levelName: LEVELS[state.level]?.name || `第${state.level + 1}关`,
+    setMode,
+    setDifficulty,
+    generateLevel,
+    nextRandomLevel,
+    isGenerating,
+    generateError,
+    totalLevels: state.mode === "random" ? state.customLevels.length : LEVELS.length,
+    levelName: currentLevelData?.name || `第${state.level + 1}关`,
   };
 }
