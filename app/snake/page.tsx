@@ -12,26 +12,26 @@ export default function SnakePage() {
   return (
     <>
       <Header />
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors text-sm">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-5 sm:py-6 lg:py-8">
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors text-xs sm:text-sm touch-target inline-flex items-center py-2">
             ← 主页
           </Link>
-          <span className="text-slate-700">/</span>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <span className="text-slate-700 text-sm">/</span>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-white flex items-center gap-1 sm:gap-2">
             🐍 贪吃蛇
           </h1>
         </div>
 
-        <div className="flex flex-col xl:flex-row gap-8 items-start">
+        <div className="flex flex-col xl:flex-row gap-5 sm:gap-6 lg:gap-8 items-start">
           {/* Game */}
-          <div className="flex-1">
+          <div className="flex-1 w-full">
             <SnakeGame />
           </div>
 
           {/* Settings sidebar */}
-          <div className="w-full xl:w-64 bg-slate-800 rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-slate-300 mb-4">游戏设置</h2>
+          <div className="w-full xl:w-64 bg-slate-800 rounded-xl p-3 sm:p-4">
+            <h2 className="text-xs sm:text-sm font-semibold text-slate-300 mb-3 sm:mb-4">游戏设置</h2>
             <GameSettings />
           </div>
         </div>

@@ -12,25 +12,25 @@ export default function TetrisPage() {
   return (
     <>
       <Header />
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="flex items-center gap-3 mb-6">
-          <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors text-sm">
+          <Link href="/" className="text-slate-500 hover:text-slate-300 transition-colors text-sm touch-target inline-flex items-center py-2">
             ← 主页
           </Link>
           <span className="text-slate-700">/</span>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
             🟦 俄罗斯方块
           </h1>
         </div>
 
-        <div className="flex flex-col xl:flex-row gap-8 items-start">
+        <div className="flex flex-col gap-8 items-start">
           {/* Game */}
-          <div className="flex-1">
+          <div className="w-full">
             <TetrisGame />
           </div>
 
           {/* Settings sidebar */}
-          <div className="w-full xl:w-64 bg-slate-800 rounded-xl p-4">
+          <div className="w-full bg-slate-800 rounded-xl p-4">
             <h2 className="text-sm font-semibold text-slate-300 mb-4">游戏设置</h2>
             <GameSettings />
           </div>

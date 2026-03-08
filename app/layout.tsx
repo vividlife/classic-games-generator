@@ -4,6 +4,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "荣升的游戏小站",
   description: "畅玩贪吃蛇和俄罗斯方块，支持多种主题和难度设置",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: "cover",
+  },
 };
 
 export default function RootLayout({

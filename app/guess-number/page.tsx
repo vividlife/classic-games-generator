@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function GuessNumberPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 py-8 px-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 py-5 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
       <GuessNumberGame />
     </main>
   );
