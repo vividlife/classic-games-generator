@@ -535,7 +535,7 @@ export default function WerewolfDealer() {
         {killedPlayer && (
           <div className="bg-red-900/30 border border-red-500/40 rounded-2xl p-6 mb-6 text-center">
             <p className="text-red-300 text-sm mb-3">今晚被杀的是</p>
-            <div className="text-6xl mb-2">{ROLES[killedPlayer.role].emoji}</div>
+            <div className="text-6xl mb-2">❓</div>
             <div className="text-3xl font-bold text-white">{killedPlayer.id}号玩家</div>
             {witchUsedSave && (
               <p className="text-red-400 text-sm mt-3">你的解药已经用完了</p>
