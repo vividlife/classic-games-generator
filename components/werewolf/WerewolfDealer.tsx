@@ -19,6 +19,8 @@ export default function WerewolfDealer() {
     dayCount,
     winner,
     allDeaths,
+    votes,
+    votedOutPlayerId,
     setPlayerCount,
     setRoleConfig,
     applyPreset,
@@ -32,6 +34,9 @@ export default function WerewolfDealer() {
     witchUseSave,
     nextNight,
     endGameManually,
+    startVoting,
+    castVote,
+    finishVoteResult,
   } = useWerewolf();
 
   const adjustRole = (role: RoleName, delta: number) => {
@@ -309,7 +314,7 @@ export default function WerewolfDealer() {
   // ─── Night Werewolf Phase ───────────────────────────────────────────────────────
   if (phase === "night_werewolf") {
     const werewolves = players.filter(p => p.role === "狼人" && p.alive);
-    const validTargets = players.filter(p => p.alive && p.role !== "狼人");
+    const alivePlayers = players.filter(p => p.alive);
 
     return (
       <div className="max-w-lg mx-auto">
@@ -322,7 +327,7 @@ export default function WerewolfDealer() {
 
         {/* Werewolf list */}
         <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-4">
-          <p className="text-slate-400 text-sm mb-2">在场狼人：</p>
+          <p className="text-slate-400 text-sm mb-2">在场狼人（红色边框）：</p>
           <div className="flex gap-2 flex-wrap">
             {werewolves.map(w => (
               <span key={w.id} className="px-3 py-1 bg-red-900/50 text-red-300 rounded-lg text-sm">
@@ -337,7 +342,7 @@ export default function WerewolfDealer() {
           {players.map(player => {
             const role = ROLES[player.role];
             const isWerewolf = player.role === "狼人";
-            const isValidTarget = !isWerewolf && player.alive;
+            const isValidTarget = player.alive;
 
             return (
               <button
@@ -348,7 +353,7 @@ export default function WerewolfDealer() {
                   !player.alive
                     ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
                     : isWerewolf
-                      ? "border-red-500/60 bg-red-900/20 cursor-not-allowed"
+                      ? "border-red-500/60 bg-red-900/20 hover:bg-red-800/40 hover:border-red-400 cursor-pointer"
                       : "border-purple-500/40 bg-purple-900/20 hover:bg-purple-800/40 hover:border-purple-400 cursor-pointer"
                 }`}
               >
@@ -358,6 +363,9 @@ export default function WerewolfDealer() {
                 {isWerewolf && <span className="text-xs text-red-300 mt-0.5">狼人</span>}
                 {!isWerewolf && player.alive && (
                   <span className="text-xs text-purple-300 mt-1">可选择</span>
+                )}
+                {isWerewolf && player.alive && (
+                  <span className="text-xs text-red-300 mt-1">可选择</span>
                 )}
               </button>
             );
@@ -497,10 +505,10 @@ export default function WerewolfDealer() {
         {/* Actions */}
         <div className="grid grid-cols-2 gap-4">
           <button
-            onClick={nextNight}
-            className="py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all"
+            onClick={startVoting}
+            className="py-4 rounded-2xl bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-lg transition-all"
           >
-            🌙 入夜
+            🗳️ 开始投票
           </button>
           <button
             onClick={() => endGameManually()}
@@ -509,6 +517,209 @@ export default function WerewolfDealer() {
             🏁 结束游戏
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // ─── Day Voting Phase ───────────────────────────────────────────────────────
+  if (phase === "day_voting") {
+    const alivePlayers = players.filter(p => p.alive);
+    const votedPlayerIds = Object.keys(votes).map(id => parseInt(id));
+    const currentVoterId = alivePlayers.find(p => !votedPlayerIds.includes(p.id))?.id ?? null;
+
+    // 计算票数统计（用于显示）
+    const voteCounts: Record<number, number> = {};
+    alivePlayers.forEach(p => {
+      const target = votes[p.id];
+      if (target !== null && target !== undefined) {
+        voteCounts[target] = (voteCounts[target] || 0) + 1;
+      }
+    });
+
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">🗳️</div>
+          <h1 className="text-2xl font-bold text-white">第 {dayCount} 天 - 投票</h1>
+          <p className="text-yellow-400 mt-2 text-lg font-semibold">
+            {currentVoterId ? `${currentVoterId}号玩家请投票` : "投票进行中..."}
+          </p>
+          <p className="text-slate-400 mt-1 text-sm">
+            已投票: {votedPlayerIds.length} / {alivePlayers.length}
+          </p>
+        </div>
+
+        {/* Vote progress */}
+        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-4">
+          <div className="flex gap-2 flex-wrap">
+            {alivePlayers.map(p => (
+              <span
+                key={p.id}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  votedPlayerIds.includes(p.id)
+                    ? "bg-green-900/50 text-green-300"
+                    : "bg-slate-700 text-slate-400"
+                }`}
+              >
+                {p.id}号 {votedPlayerIds.includes(p.id) ? "✓" : "…"}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Player grid - select who to vote out */}
+        <div className="grid grid-cols-4 gap-3 mb-4">
+          {players.map(player => {
+            const role = ROLES[player.role];
+            const canSelect = player.alive && currentVoterId !== null;
+            const currentVotes = voteCounts[player.id] || 0;
+
+            return (
+              <button
+                key={player.id}
+                onClick={() => canSelect && castVote(currentVoterId!, player.id)}
+                disabled={!canSelect}
+                className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
+                  !player.alive
+                    ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
+                    : "border-yellow-500/40 bg-yellow-900/20 hover:bg-yellow-800/40 hover:border-yellow-400 cursor-pointer"
+                }`}
+              >
+                {!player.alive && <span className="absolute top-1 right-1 text-sm">💀</span>}
+                <span className="text-xl font-bold text-white leading-none">{player.id}</span>
+                {player.alive && currentVotes > 0 && (
+                  <span className="text-xs text-yellow-300 mt-0.5">{currentVotes}票</span>
+                )}
+                {player.alive && currentVotes === 0 && (
+                  <span className="text-xs text-yellow-300/60 mt-0.5">0票</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Abstain button */}
+        {currentVoterId && (
+          <button
+            onClick={() => castVote(currentVoterId, null)}
+            className="w-full py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold text-sm transition-all mb-4"
+          >
+            🙅 弃权
+          </button>
+        )}
+
+        <button
+          onClick={() => endGameManually()}
+          className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
+        >
+          🏁 结束游戏
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Day Vote Result Phase ───────────────────────────────────────────────────────
+  if (phase === "day_vote_result") {
+    const alivePlayers = players.filter(p => p.alive);
+
+    // 计算票数统计
+    const voteCounts: Record<number, number> = {};
+    alivePlayers.forEach(p => {
+      const target = votes[p.id];
+      if (target !== null && target !== undefined) {
+        voteCounts[target] = (voteCounts[target] || 0) + 1;
+      }
+    });
+
+    // 按票数排序
+    const sortedByVotes = Object.entries(voteCounts)
+      .map(([idStr, count]) => ({ id: parseInt(idStr), count }))
+      .sort((a, b) => b.count - a.count);
+
+    const votedOutPlayer = votedOutPlayerId ? players.find(p => p.id === votedOutPlayerId) : null;
+    const isTie = votedOutPlayerId === null && sortedByVotes.length > 0;
+
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">📊</div>
+          <h1 className="text-2xl font-bold text-white">第 {dayCount} 天 - 投票结果</h1>
+          <p className="text-yellow-400 mt-2 text-lg font-semibold">
+            {votedOutPlayer ? `${votedOutPlayer.id}号玩家被投出局` : isTie ? "平票，无人出局" : "无人投票"}
+          </p>
+        </div>
+
+        {/* Vote count details */}
+        <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-6">
+          <h2 className="text-lg font-semibold text-white mb-4">投票详情</h2>
+          <div className="space-y-3">
+            {alivePlayers.map(voter => {
+              const targetId = votes[voter.id];
+              const targetPlayer = targetId !== null && targetId !== undefined
+                ? players.find(p => p.id === targetId)
+                : null;
+              return (
+                <div key={voter.id} className="flex items-center justify-between bg-slate-700/50 rounded-xl p-3">
+                  <span className="text-white">
+                    {voter.id}号
+                  </span>
+                  <span className="text-slate-400">
+                    → {targetPlayer ? `${targetPlayer.id}号` : "弃权"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Vote count summary */}
+        {sortedByVotes.length > 0 && (
+          <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-6">
+            <h2 className="text-lg font-semibold text-white mb-4">票数统计</h2>
+            <div className="space-y-2">
+              {sortedByVotes.map(({ id, count }) => {
+                const player = players.find(p => p.id === id);
+                const isVotedOut = id === votedOutPlayerId;
+                return (
+                  <div
+                    key={id}
+                    className={`flex items-center justify-between rounded-xl p-3 ${
+                      isVotedOut
+                        ? "bg-red-900/30 border border-red-500/40"
+                        : "bg-slate-700/50"
+                    }`}
+                  >
+                    <span className="text-white flex items-center gap-2">
+                      {id}号 {player && ROLES[player.role].emoji}
+                      {isVotedOut && <span className="text-red-300 text-sm">(出局)</span>}
+                    </span>
+                    <span className={`font-bold ${isVotedOut ? "text-red-300" : "text-yellow-300"}`}>
+                      {count}票
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Voted out player reveal */}
+        {votedOutPlayer && (
+          <div className="bg-red-900/30 border border-red-500/40 rounded-2xl p-6 mb-6 text-center">
+            <p className="text-red-300 text-sm mb-3">被投出局的是</p>
+            <div className="text-5xl mb-2">{ROLES[votedOutPlayer.role].emoji}</div>
+            <div className="text-3xl font-bold text-white">{votedOutPlayer.id}号玩家</div>
+            <div className="text-xl mt-2">{votedOutPlayer.role}</div>
+          </div>
+        )}
+
+        {/* Continue button */}
+        <button
+          onClick={finishVoteResult}
+          className="w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all"
+        >
+          {votedOutPlayer ? "🌙 入夜" : "🌙 继续"}
+        </button>
       </div>
     );
   }
