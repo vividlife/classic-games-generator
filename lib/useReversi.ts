@@ -181,13 +181,12 @@ function reversiReducer(state: ReversiState, action: ReversiAction): ReversiStat
       const nextValidMoves = getValidMoves(newBoard, nextPlayer);
       
       // Check if game should end
-      const opponentValidMoves = getValidMoves(newBoard, nextPlayer);
-      const currentValidMoves = getValidMoves(newBoard, state.currentPlayer);
-      
+      const currentPlayerMovesAfter = getValidMoves(newBoard, state.currentPlayer);
+
       // Game ends if both players have no valid moves, or board is full
       const boardFull = black + white >= BOARD_SIZE * BOARD_SIZE;
-      
-      if (opponentValidMoves.length === 0 && (currentValidMoves.length === 0 || boardFull)) {
+
+      if (nextValidMoves.length === 0 && (currentPlayerMovesAfter.length === 0 || boardFull)) {
         const winner = black > white ? "black" : white > black ? "white" : null;
         return {
           ...state,
@@ -202,7 +201,7 @@ function reversiReducer(state: ReversiState, action: ReversiAction): ReversiStat
       }
       
       // If opponent has no moves, they skip, current player continues
-      if (opponentValidMoves.length === 0) {
+      if (nextValidMoves.length === 0) {
         const currentPlayerAgainValidMoves = getValidMoves(newBoard, state.currentPlayer);
         return {
           ...state,
@@ -406,10 +405,12 @@ export function useReversi(difficulty: Difficulty, initialMode: ReversiGameMode 
       dispatch({ type: "SET_AI_THINKING", value: true });
       const timer = setTimeout(() => {
         const move = getAIMove(boardRef.current, difficulty, "white");
+        // Must clear aiThinking BEFORE placing piece, otherwise React 18
+        // batching causes PLACE_PIECE to be rejected by the aiThinking guard.
+        dispatch({ type: "SET_AI_THINKING", value: false });
         if (move) {
           dispatch({ type: "PLACE_PIECE", row: move.row, col: move.col });
         }
-        dispatch({ type: "SET_AI_THINKING", value: false });
       }, 400);
       aiTimeoutRef.current = timer;
       return () => clearTimeout(timer);
