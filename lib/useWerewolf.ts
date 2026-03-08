@@ -64,6 +64,8 @@ interface WerewolfState {
   winner: "狼人" | "好人" | null; // 游戏胜利方
   allDeaths: number[]; // 所有死亡的玩家记录
   votedOutPlayerId: number | null; // 被投票出局的玩家id
+  voiceEnabled: boolean; // 是否开启语音
+  lastSpokenPhase: GamePhase | null; // 上次播放语音的阶段，防止重复播放
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -101,6 +103,8 @@ export function useWerewolf() {
     winner: null,
     allDeaths: [],
     votedOutPlayerId: null,
+    voiceEnabled: true,
+    lastSpokenPhase: null,
   }));
 
   const setPlayerCount = useCallback((count: number) => {
@@ -186,6 +190,20 @@ export function useWerewolf() {
     }));
   }, []);
 
+  const toggleVoice = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      voiceEnabled: !prev.voiceEnabled,
+    }));
+  }, []);
+
+  const setLastSpokenPhase = useCallback((phase: GamePhase | null) => {
+    setState(prev => ({
+      ...prev,
+      lastSpokenPhase: phase,
+    }));
+  }, []);
+
   const resetToSetup = useCallback(() => {
     setState(prev => ({
       ...prev,
@@ -201,6 +219,7 @@ export function useWerewolf() {
       winner: null,
       allDeaths: [],
       votedOutPlayerId: null,
+      lastSpokenPhase: null,
     }));
   }, []);
 
@@ -365,5 +384,7 @@ export function useWerewolf() {
     nextNight,
     endGameManually,
     voteOutPlayer,
+    toggleVoice,
+    setLastSpokenPhase,
   };
 }

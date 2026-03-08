@@ -1,6 +1,36 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useWerewolf, ROLES, PRESET_CONFIGS, RoleName, GamePhase } from "@/lib/useWerewolf";
+
+// 语音提示文本
+const VOICE_PROMPTS = {
+  night_start: "天黑了，所有玩家请闭眼",
+  werewolf_open: "狼人请睁眼，请选择要猎杀的目标",
+  werewolf_close: "狼人请闭眼",
+  witch_open: (playerId: number | null) =>
+    playerId ? `女巫请睁眼，今晚${playerId}号玩家死了，你是否使用解药` : "女巫请睁眼",
+  witch_close: "女巫请闭眼",
+  day_start: "天亮了，所有玩家请睁眼",
+};
+
+// 使用 Web Speech API 播放语音
+function speak(text: string, enabled: boolean) {
+  if (!enabled || typeof window === "undefined" || !("speechSynthesis" in window)) {
+    return;
+  }
+
+  // 取消之前的语音
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "zh-CN";
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  window.speechSynthesis.speak(utterance);
+}
 
 const ALL_ROLES: RoleName[] = ["狼人", "村民", "预言家", "女巫", "猎人", "守卫"];
 
@@ -20,6 +50,8 @@ export default function WerewolfDealer() {
     winner,
     allDeaths,
     votedOutPlayerId,
+    voiceEnabled,
+    lastSpokenPhase,
     setPlayerCount,
     setRoleConfig,
     applyPreset,
@@ -34,7 +66,57 @@ export default function WerewolfDealer() {
     nextNight,
     endGameManually,
     voteOutPlayer,
+    toggleVoice,
+    setLastSpokenPhase,
   } = useWerewolf();
+
+  // 跟踪上一个阶段，用于检测阶段变化
+  const prevPhaseRef = useRef<GamePhase | null>(null);
+
+  // 语音播放逻辑
+  useEffect(() => {
+    if (!voiceEnabled) return;
+    if (phase === lastSpokenPhase) return;
+
+    // 当进入夜晚（狼人阶段）时，播放"天黑了"
+    if (phase === "night_werewolf" && prevPhaseRef.current !== "night_werewolf") {
+      // 如果是从白天或开始游戏进入，则先播放"天黑了"
+      if (prevPhaseRef.current === "day" || prevPhaseRef.current === "dealt" || prevPhaseRef.current === null) {
+        speak(VOICE_PROMPTS.night_start, true);
+        // 延迟播放狼人语音
+        setTimeout(() => {
+          speak(VOICE_PROMPTS.werewolf_open, true);
+        }, 3000);
+      } else {
+        speak(VOICE_PROMPTS.werewolf_open, true);
+      }
+      setLastSpokenPhase(phase);
+    }
+    // 当进入女巫阶段时，先播放"狼人请闭眼"，再播放女巫提示
+    else if (phase === "night_witch" && lastSpokenPhase === "night_werewolf") {
+      speak(VOICE_PROMPTS.werewolf_close, true);
+      setTimeout(() => {
+        const killedPlayer = nightKillTarget;
+        speak(VOICE_PROMPTS.witch_open(killedPlayer), true);
+      }, 2000);
+      setLastSpokenPhase(phase);
+    }
+    // 当进入白天时，播放"女巫请闭眼"和"天亮了"
+    else if (phase === "day" && lastSpokenPhase === "night_witch") {
+      speak(VOICE_PROMPTS.witch_close, true);
+      setTimeout(() => {
+        speak(VOICE_PROMPTS.day_start, true);
+      }, 2000);
+      setLastSpokenPhase(phase);
+    }
+    // 直接进入白天（比如游戏结束后的重新开始）
+    else if (phase === "day" && lastSpokenPhase !== "day") {
+      speak(VOICE_PROMPTS.day_start, true);
+      setLastSpokenPhase(phase);
+    }
+
+    prevPhaseRef.current = phase;
+  }, [phase, voiceEnabled, lastSpokenPhase, nightKillTarget, setLastSpokenPhase]);
 
   const adjustRole = (role: RoleName, delta: number) => {
     const current = roleConfig[role] ?? 0;
@@ -52,6 +134,20 @@ export default function WerewolfDealer() {
           <div className="text-6xl mb-3">🐺</div>
           <h1 className="text-3xl font-bold text-white">狼人杀发牌工具</h1>
           <p className="text-slate-400 mt-2 text-sm">极简版身份分配，无流程、无发言</p>
+        </div>
+
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
         </div>
 
         {/* Player count */}
@@ -169,6 +265,20 @@ export default function WerewolfDealer() {
 
     return (
       <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">🐺</div>
           <h1 className="text-2xl font-bold text-white">狼人杀发牌工具</h1>
@@ -315,6 +425,20 @@ export default function WerewolfDealer() {
 
     return (
       <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">🌙</div>
           <h1 className="text-2xl font-bold text-white">第 {dayCount} 夜</h1>
@@ -386,6 +510,20 @@ export default function WerewolfDealer() {
 
     return (
       <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">🌙</div>
           <h1 className="text-2xl font-bold text-white">第 {dayCount} 夜</h1>
@@ -452,6 +590,20 @@ export default function WerewolfDealer() {
 
     return (
       <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">☀️</div>
           <h1 className="text-2xl font-bold text-white">第 {dayCount} 天</h1>
@@ -578,6 +730,20 @@ export default function WerewolfDealer() {
 
     return (
       <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
         {/* Winner Banner */}
         <div className={`text-center mb-6 rounded-2xl p-8 border-2 ${
           isGoodWin
