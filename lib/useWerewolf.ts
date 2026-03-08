@@ -47,7 +47,7 @@ export interface Player {
   alive: boolean; // 是否存活
 }
 
-export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day" | "game_over";
+export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day" | "werewolf_assassination" | "game_over";
 
 interface WerewolfState {
   phase: GamePhase;
@@ -66,6 +66,9 @@ interface WerewolfState {
   votedOutPlayerId: number | null; // 被投票出局的玩家id
   voiceEnabled: boolean; // 是否开启语音
   lastSpokenPhase: GamePhase | null; // 上次播放语音的阶段，防止重复播放
+  assassinationTarget: number | null; // 狼人刺杀的目标
+  assassinationResult: "hit_witch" | "missed" | null; // 刺杀结果
+  pendingAssassination: boolean; // 是否需要进入刺杀环节
 }
 
 // 生成更安全的随机数
@@ -143,6 +146,9 @@ export function useWerewolf() {
     votedOutPlayerId: null,
     voiceEnabled: true,
     lastSpokenPhase: null,
+    assassinationTarget: null,
+    assassinationResult: null,
+    pendingAssassination: false,
   }));
 
   const setPlayerCount = useCallback((count: number) => {
@@ -199,6 +205,9 @@ export function useWerewolf() {
         winner: null,
         allDeaths: [],
         votedOutPlayerId: null,
+        assassinationTarget: null,
+        assassinationResult: null,
+        pendingAssassination: false,
       };
     });
   }, []);
@@ -263,10 +272,13 @@ export function useWerewolf() {
       allDeaths: [],
       votedOutPlayerId: null,
       lastSpokenPhase: null,
+      assassinationTarget: null,
+      assassinationResult: null,
+      pendingAssassination: false,
     }));
   }, []);
 
-  // 检查游戏是否结束，返回胜利方
+  // 检查游戏是否应该结束，返回胜利方，或 null 表示继续
   const checkGameEnd = useCallback((players: Player[]): "狼人" | "好人" | null => {
     const aliveWerewolves = players.filter(p => p.alive && p.role === "狼人").length;
     const aliveGood = players.filter(p => p.alive && ROLES[p.role].team === "好人").length;
@@ -278,6 +290,19 @@ export function useWerewolf() {
       return "狼人";
     }
     return null;
+  }, []);
+
+  // 检查是否需要进入刺杀环节（游戏本应结束但还可以刺杀）
+  const shouldEnterAssassination = useCallback((players: Player[], currentWinner: "狼人" | "好人" | null): boolean => {
+    // 只有当游戏本应结束时才考虑刺杀环节
+    if (!currentWinner) return false;
+
+    // 只有当女巫存活时才能进入刺杀环节
+    const witchAlive = players.some(p => p.role === "女巫" && p.alive);
+    if (!witchAlive) return false;
+
+    // 无论是狼人本来要赢还是好人本来要赢，都进入刺杀环节
+    return true;
   }, []);
 
   // 手动结束游戏
@@ -333,7 +358,8 @@ export function useWerewolf() {
 
       // 检查游戏是否结束
       const winner = checkGameEnd(newPlayers);
-      const newPhase = winner ? "game_over" : "day";
+      const needsAssassination = !!(winner && shouldEnterAssassination(newPlayers, winner));
+      const newPhase = needsAssassination ? "werewolf_assassination" : (winner ? "game_over" : "day");
 
       return {
         ...prev,
@@ -342,24 +368,35 @@ export function useWerewolf() {
         nightDeaths: newNightDeaths,
         players: newPlayers,
         allDeaths: newAllDeaths,
-        winner,
+        winner: needsAssassination ? null : winner,
         phase: newPhase,
-        globalUnlocked: winner ? true : prev.globalUnlocked,
+        globalUnlocked: (winner && !needsAssassination) ? true : prev.globalUnlocked,
+        pendingAssassination: needsAssassination,
       };
     });
-  }, [checkGameEnd]);
+  }, [checkGameEnd, shouldEnterAssassination]);
 
   // 进入下一夜，自动检查游戏是否结束
   const nextNight = useCallback(() => {
     setState(prev => {
       // 检查游戏是否结束
       const winner = checkGameEnd(prev.players);
-      if (winner) {
+      const needsAssassination = !!(winner && shouldEnterAssassination(prev.players, winner));
+
+      if (winner && !needsAssassination) {
         return {
           ...prev,
           phase: "game_over",
           winner,
           globalUnlocked: true,
+        };
+      }
+
+      if (needsAssassination) {
+        return {
+          ...prev,
+          phase: "werewolf_assassination",
+          pendingAssassination: true,
         };
       }
 
@@ -373,7 +410,27 @@ export function useWerewolf() {
         votedOutPlayerId: null,
       };
     });
-  }, [checkGameEnd]);
+  }, [checkGameEnd, shouldEnterAssassination]);
+
+  // 狼人执行刺杀
+  const werewolfAssassinate = useCallback((targetId: number) => {
+    setState(prev => {
+      const targetPlayer = prev.players.find(p => p.id === targetId);
+      const isWitch = targetPlayer?.role === "女巫";
+
+      const assassinationResult: "hit_witch" | "missed" = isWitch ? "hit_witch" : "missed";
+      const finalWinner: "狼人" | "好人" = isWitch ? "狼人" : "好人";
+
+      return {
+        ...prev,
+        assassinationTarget: targetId,
+        assassinationResult,
+        phase: "game_over",
+        winner: finalWinner,
+        globalUnlocked: true,
+      };
+    });
+  }, []);
 
   // 简化投票：直接处决玩家或选择无人出局
   const voteOutPlayer = useCallback((targetId: number | null) => {
@@ -391,19 +448,21 @@ export function useWerewolf() {
 
       // 检查游戏是否结束
       const winner = checkGameEnd(newPlayers);
-      const newPhase = winner ? "game_over" : "day";
+      const needsAssassination = !!(winner && shouldEnterAssassination(newPlayers, winner));
+      const newPhase = needsAssassination ? "werewolf_assassination" : (winner ? "game_over" : "day");
 
       return {
         ...prev,
         players: newPlayers,
         allDeaths: newAllDeaths,
-        winner,
+        winner: needsAssassination ? null : winner,
         phase: newPhase,
-        globalUnlocked: winner ? true : prev.globalUnlocked,
+        globalUnlocked: (winner && !needsAssassination) ? true : prev.globalUnlocked,
         votedOutPlayerId: targetId,
+        pendingAssassination: needsAssassination,
       };
     });
-  }, [checkGameEnd]);
+  }, [checkGameEnd, shouldEnterAssassination]);
 
   const totalRoles = Object.values(state.roleConfig).reduce(
     (sum, n) => sum + (n ?? 0),
@@ -429,5 +488,6 @@ export function useWerewolf() {
     voteOutPlayer,
     toggleVoice,
     setLastSpokenPhase,
+    werewolfAssassinate,
   };
 }

@@ -11,6 +11,7 @@ const VOICE_PROMPTS = {
   witch_open: () => "女巫请睁眼",
   witch_close: "女巫请闭眼",
   day_start: "天亮了，所有玩家请睁眼",
+  assassination_start: "狼人阵营即将失败，但还有最后一次刺杀机会！",
 };
 
 // 使用 Web Speech API 播放语音
@@ -51,6 +52,8 @@ export default function WerewolfDealer() {
     votedOutPlayerId,
     voiceEnabled,
     lastSpokenPhase,
+    assassinationTarget,
+    assassinationResult,
     setPlayerCount,
     setRoleConfig,
     applyPreset,
@@ -67,6 +70,7 @@ export default function WerewolfDealer() {
     voteOutPlayer,
     toggleVoice,
     setLastSpokenPhase,
+    werewolfAssassinate,
   } = useWerewolf();
 
   // 跟踪上一个阶段，用于检测阶段变化
@@ -110,6 +114,11 @@ export default function WerewolfDealer() {
     // 直接进入白天（比如游戏结束后的重新开始）
     else if (phase === "day" && lastSpokenPhase !== "day") {
       speak(VOICE_PROMPTS.day_start, true);
+      setLastSpokenPhase(phase);
+    }
+    // 进入刺杀环节
+    else if (phase === "werewolf_assassination" && lastSpokenPhase !== "werewolf_assassination") {
+      speak(VOICE_PROMPTS.assassination_start, true);
       setLastSpokenPhase(phase);
     }
 
@@ -720,6 +729,95 @@ export default function WerewolfDealer() {
     );
   }
 
+  // ─── Werewolf Assassination Phase ───────────────────────────────────────────────────────
+  if (phase === "werewolf_assassination") {
+    const werewolves = players.filter(p => p.role === "狼人");
+    const aliveWerewolves = werewolves.filter(p => p.alive);
+    const alivePlayers = players.filter(p => p.alive);
+
+    return (
+      <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">⚔️</div>
+          <h1 className="text-2xl font-bold text-white">最后刺杀机会</h1>
+          <p className="text-red-400 mt-2 text-lg font-semibold">狼人阵营即将失败，但还有最后一次机会！</p>
+          <p className="text-slate-400 mt-1 text-sm">选择一名存活玩家进行刺杀，如果是女巫则狼人胜利</p>
+        </div>
+
+        {/* Werewolf list */}
+        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-4">
+          <p className="text-slate-400 text-sm mb-2">狼人阵营（红色边框）：</p>
+          <div className="flex gap-2 flex-wrap">
+            {werewolves.map(w => (
+              <span key={w.id} className={`px-3 py-1 rounded-lg text-sm ${
+                w.alive
+                  ? "bg-red-900/50 text-red-300"
+                  : "bg-slate-700/50 text-slate-400 opacity-50"
+              }`}>
+                {w.id}号 {w.alive ? "" : "💀"}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Player grid - select assassination target */}
+        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-4">
+          <p className="text-yellow-400 text-sm mb-3 font-semibold">选择刺杀目标（仅存活玩家）：</p>
+          <div className="grid grid-cols-4 gap-3">
+            {players.map(player => {
+              const role = ROLES[player.role];
+              const isWerewolf = player.role === "狼人";
+              const isValidTarget = player.alive;
+
+              return (
+                <button
+                  key={player.id}
+                  onClick={() => isValidTarget && werewolfAssassinate(player.id)}
+                  disabled={!isValidTarget}
+                  className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
+                    !player.alive
+                      ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
+                      : isWerewolf
+                        ? "border-red-500/40 bg-red-900/20 hover:bg-red-800/40 hover:border-red-400 cursor-pointer"
+                        : "border-yellow-500/40 bg-yellow-900/20 hover:bg-yellow-800/40 hover:border-yellow-400 cursor-pointer"
+                  }`}
+                >
+                  {!player.alive && <span className="absolute top-1 right-1 text-sm">💀</span>}
+                  <span className="text-xl font-bold text-white leading-none">{player.id}</span>
+                  {isWerewolf && player.alive && <span className="text-2xl mt-1">{role.emoji}</span>}
+                  {isWerewolf && player.alive && <span className="text-xs text-red-300 mt-0.5">狼人</span>}
+                  {!isWerewolf && player.alive && <span className="text-xs text-yellow-300 mt-1">可刺杀</span>}
+                  {!player.alive && <span className="text-xs text-slate-500 mt-1">已死亡</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <button
+          onClick={() => endGameManually()}
+          className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
+        >
+          🏁 结束游戏
+        </button>
+      </div>
+    );
+  }
+
   // ─── Game Over Phase ───────────────────────────────────────────────────────
   if (phase === "game_over") {
     const isGoodWin = winner === "好人";
@@ -756,6 +854,38 @@ export default function WerewolfDealer() {
             {winner}阵营胜利！
           </div>
         </div>
+
+        {/* Assassination Result */}
+        {assassinationResult && assassinationTarget && (
+          <div className={`text-center mb-6 rounded-2xl p-6 border-2 ${
+            assassinationResult === "hit_witch"
+              ? "bg-red-900/30 border-red-500/40"
+              : "bg-blue-900/30 border-blue-500/40"
+          }`}>
+            <h2 className="text-xl font-bold text-white mb-3">⚔️ 最后刺杀结果</h2>
+            {(() => {
+              const targetPlayer = players.find(p => p.id === assassinationTarget);
+              if (!targetPlayer) return null;
+              const targetRole = ROLES[targetPlayer.role];
+              return (
+                <>
+                  <p className="text-slate-300 mb-2">狼人选择刺杀了</p>
+                  <div className="text-5xl mb-2">{targetRole.emoji}</div>
+                  <div className="text-2xl font-bold text-white">{targetPlayer.id}号玩家</div>
+                  <div className="text-lg text-slate-300 mt-1">{targetRole.name}</div>
+                  <div className={`text-lg font-bold mt-3 ${
+                    assassinationResult === "hit_witch" ? "text-red-400" : "text-blue-400"
+                  }`}>
+                    {assassinationResult === "hit_witch"
+                      ? "🎯 刺杀成功！狼人阵营胜利！"
+                      : "❌ 刺杀失败！好人阵营胜利！"
+                    }
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
 
         {/* Game Stats */}
         <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-4">
