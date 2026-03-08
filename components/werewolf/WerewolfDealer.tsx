@@ -17,6 +17,8 @@ export default function WerewolfDealer() {
     witchUsedSave,
     nightDeaths,
     dayCount,
+    winner,
+    allDeaths,
     setPlayerCount,
     setRoleConfig,
     applyPreset,
@@ -29,6 +31,7 @@ export default function WerewolfDealer() {
     werewolfKill,
     witchUseSave,
     nextNight,
+    endGameManually,
   } = useWerewolf();
 
   const adjustRole = (role: RoleName, delta: number) => {
@@ -362,10 +365,10 @@ export default function WerewolfDealer() {
         </div>
 
         <button
-          onClick={resetToSetup}
+          onClick={() => endGameManually()}
           className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
         >
-          🔄 结束游戏
+          🏁 结束游戏
         </button>
       </div>
     );
@@ -428,10 +431,10 @@ export default function WerewolfDealer() {
         )}
 
         <button
-          onClick={resetToSetup}
+          onClick={() => endGameManually()}
           className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all mt-3"
         >
-          🔄 结束游戏
+          🏁 结束游戏
         </button>
       </div>
     );
@@ -500,12 +503,133 @@ export default function WerewolfDealer() {
             🌙 入夜
           </button>
           <button
-            onClick={resetToSetup}
+            onClick={() => endGameManually()}
             className="py-4 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg transition-all"
           >
-            🔄 结束游戏
+            🏁 结束游戏
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // ─── Game Over Phase ───────────────────────────────────────────────────────
+  if (phase === "game_over") {
+    const isGoodWin = winner === "好人";
+    const deadPlayers = players.filter(p => !p.alive);
+    const alivePlayers = players.filter(p => p.alive);
+
+    return (
+      <div className="max-w-lg mx-auto">
+        {/* Winner Banner */}
+        <div className={`text-center mb-6 rounded-2xl p-8 border-2 ${
+          isGoodWin
+            ? "bg-blue-900/40 border-blue-500/60"
+            : "bg-red-900/40 border-red-500/60"
+        }`}>
+          <div className="text-6xl mb-3">{isGoodWin ? "🏆" : "🐺"}</div>
+          <h1 className="text-3xl font-bold text-white mb-2">游戏结束</h1>
+          <div className={`text-2xl font-black ${
+            isGoodWin ? "text-blue-400" : "text-red-400"
+          }`}>
+            {winner}阵营胜利！
+          </div>
+        </div>
+
+        {/* Game Stats */}
+        <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-4">
+          <h2 className="text-lg font-semibold text-white mb-4">📊 游戏统计</h2>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="bg-slate-700/50 rounded-xl p-3">
+              <p className="text-slate-400">进行天数</p>
+              <p className="text-2xl font-bold text-white">{dayCount} 天</p>
+            </div>
+            <div className="bg-slate-700/50 rounded-xl p-3">
+              <p className="text-slate-400">死亡人数</p>
+              <p className="text-2xl font-bold text-white">{deadPlayers.length} 人</p>
+            </div>
+            <div className="bg-slate-700/50 rounded-xl p-3">
+              <p className="text-slate-400">存活玩家</p>
+              <p className="text-2xl font-bold text-white">{alivePlayers.length} 人</p>
+            </div>
+            <div className="bg-slate-700/50 rounded-xl p-3">
+              <p className="text-slate-400">总玩家数</p>
+              <p className="text-2xl font-bold text-white">{players.length} 人</p>
+            </div>
+          </div>
+        </div>
+
+        {/* All Players Final Status */}
+        <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-4">
+          <h2 className="text-lg font-semibold text-white mb-4">👥 玩家最终状态</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {players.map(player => {
+              const role = ROLES[player.role];
+              return (
+                <div
+                  key={player.id}
+                  className={`rounded-xl p-3 border-2 ${
+                    !player.alive
+                      ? "bg-slate-900/50 border-slate-600 opacity-60"
+                      : role.team === "狼人"
+                        ? "bg-red-900/20 border-red-500/40"
+                        : "bg-blue-900/20 border-blue-500/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl font-bold text-white">{player.id}号</span>
+                    {!player.alive && <span className="text-lg">💀</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{role.emoji}</span>
+                    <div>
+                      <p className="text-white font-medium text-sm">{role.name}</p>
+                      <p className={`text-xs ${
+                        role.team === "狼人" ? "text-red-400" : "text-blue-400"
+                      }`}>
+                        {role.team}阵营
+                      </p>
+                    </div>
+                  </div>
+                  <p className={`text-xs mt-2 ${
+                    player.alive ? "text-green-400" : "text-slate-500"
+                  }`}>
+                    {player.alive ? "存活" : "死亡"}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Death Order (if any) */}
+        {deadPlayers.length > 0 && (
+          <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 mb-6">
+            <h2 className="text-lg font-semibold text-white mb-4">⚰️ 死亡名单</h2>
+            <div className="flex flex-wrap gap-2">
+              {allDeaths.map((id, index) => {
+                const player = players.find(p => p.id === id);
+                if (!player) return null;
+                return (
+                  <span
+                    key={`${id}-${index}`}
+                    className="px-3 py-1.5 bg-red-900/30 text-red-300 rounded-lg text-sm border border-red-500/30"
+                  >
+                    第{index + 1}夜: {id}号 {ROLES[player.role].emoji}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Restart Button */}
+        <button
+          onClick={resetToSetup}
+          className="w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all shadow-lg shadow-purple-900/30"
+        >
+          🔄 重新开始
+        </button>
       </div>
     );
   }

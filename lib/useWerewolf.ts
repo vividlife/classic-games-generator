@@ -47,7 +47,7 @@ export interface Player {
   alive: boolean; // 是否存活
 }
 
-export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day";
+export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day" | "game_over";
 
 interface WerewolfState {
   phase: GamePhase;
@@ -61,6 +61,8 @@ interface WerewolfState {
   witchUsedSave: boolean; // 女巫是否已经用过解药
   nightDeaths: number[]; // 今晚死亡的玩家
   dayCount: number; // 第几天
+  winner: "狼人" | "好人" | null; // 游戏胜利方
+  allDeaths: number[]; // 所有死亡的玩家记录
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -95,6 +97,8 @@ export function useWerewolf() {
     witchUsedSave: false,
     nightDeaths: [],
     dayCount: 1,
+    winner: null,
+    allDeaths: [],
   }));
 
   const setPlayerCount = useCallback((count: number) => {
@@ -143,6 +147,8 @@ export function useWerewolf() {
         witchUsedSave: false,
         nightDeaths: [],
         dayCount: 1,
+        winner: null,
+        allDeaths: [],
       };
     });
   }, []);
@@ -189,8 +195,37 @@ export function useWerewolf() {
       witchUsedSave: false,
       nightDeaths: [],
       dayCount: 1,
+      winner: null,
+      allDeaths: [],
     }));
   }, []);
+
+  // 检查游戏是否结束，返回胜利方
+  const checkGameEnd = useCallback((players: Player[]): "狼人" | "好人" | null => {
+    const aliveWerewolves = players.filter(p => p.alive && p.role === "狼人").length;
+    const aliveGood = players.filter(p => p.alive && ROLES[p.role].team === "好人").length;
+
+    if (aliveWerewolves === 0) {
+      return "好人";
+    }
+    if (aliveWerewolves >= aliveGood) {
+      return "狼人";
+    }
+    return null;
+  }, []);
+
+  // 手动结束游戏
+  const endGameManually = useCallback((winner?: "狼人" | "好人") => {
+    setState(prev => {
+      const finalWinner = winner ?? checkGameEnd(prev.players) ?? "好人";
+      return {
+        ...prev,
+        phase: "game_over",
+        winner: finalWinner,
+        globalUnlocked: true,
+      };
+    });
+  }, [checkGameEnd]);
 
   // 开始游戏流程
   const startGame = useCallback(() => {
@@ -223,18 +258,30 @@ export function useWerewolf() {
         newNightDeaths.push(prev.nightKillTarget);
       }
 
+      const newPlayers = prev.players.map(p =>
+        newNightDeaths.includes(p.id) ? { ...p, alive: false } : p
+      );
+
+      // 更新所有死亡记录
+      const newAllDeaths = [...prev.allDeaths, ...newNightDeaths];
+
+      // 检查游戏是否结束
+      const winner = checkGameEnd(newPlayers);
+      const newPhase = winner ? "game_over" : "day";
+
       return {
         ...prev,
         witchSaved: useSave,
         witchUsedSave: newWitchUsedSave,
         nightDeaths: newNightDeaths,
-        players: prev.players.map(p =>
-          newNightDeaths.includes(p.id) ? { ...p, alive: false } : p
-        ),
-        phase: "day",
+        players: newPlayers,
+        allDeaths: newAllDeaths,
+        winner,
+        phase: newPhase,
+        globalUnlocked: winner ? true : prev.globalUnlocked,
       };
     });
-  }, []);
+  }, [checkGameEnd]);
 
   // 进入下一夜
   const nextNight = useCallback(() => {
@@ -268,5 +315,6 @@ export function useWerewolf() {
     werewolfKill,
     witchUseSave,
     nextNight,
+    endGameManually,
   };
 }
