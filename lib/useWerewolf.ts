@@ -68,13 +68,51 @@ interface WerewolfState {
   lastSpokenPhase: GamePhase | null; // 上次播放语音的阶段，防止重复播放
 }
 
+// 生成更安全的随机数
+function secureRandom(): number {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    return array[0] / (0xffffffff + 1);
+  }
+  // 回退到 Math.random，但添加时间戳扰动
+  return (Math.random() + Date.now() % 1000 / 10000) % 1;
+}
+
+// 使用改进的 Fisher-Yates 洗牌算法
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+  const n = a.length;
+
+  // 从后往前洗牌
+  for (let i = n - 1; i > 0; i--) {
+    // 使用更随机的方式生成 j
+    const j = Math.floor(secureRandom() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
+
+  // 再从前往后洗牌一次，增强随机性
+  for (let i = 0; i < n - 1; i++) {
+    const j = i + Math.floor(secureRandom() * (n - i));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+
   return a;
+}
+
+// 多次洗牌以增强随机性
+function shuffleArrayMultiple<T>(arr: T[], times: number = 5): T[] {
+  let result = [...arr];
+  // 每次洗牌前先根据当前时间扰动一下
+  const seed = Date.now() % 100;
+  for (let s = 0; s < seed % 3; s++) {
+    result = shuffleArray(result);
+  }
+  // 正式洗牌多次
+  for (let i = 0; i < times; i++) {
+    result = shuffleArray(result);
+  }
+  return result;
 }
 
 function buildRoleList(config: RoleConfig): RoleName[] {
@@ -129,11 +167,16 @@ export function useWerewolf() {
   }, []);
 
   const dealRoles = useCallback(() => {
+    // 注意：我们无法在这里直接访问 prev.state，
+    // 所以仍需要在 setState 内部进行随机化，但使用多次洗牌确保随机性
     setState(prev => {
-      let roleList = shuffleArray(buildRoleList(prev.roleConfig));
-      // Pad with 村民 if needed, trim if too many
+      // 构建角色列表
+      let roleList = buildRoleList(prev.roleConfig);
+      // 补齐或截断到玩家数量
       while (roleList.length < prev.playerCount) roleList.push("村民");
       roleList = roleList.slice(0, prev.playerCount);
+      // 多次洗牌确保随机性 - 增加到7次
+      roleList = shuffleArrayMultiple(roleList, 7);
 
       const players: Player[] = roleList.map((role, i) => ({
         id: i + 1,
