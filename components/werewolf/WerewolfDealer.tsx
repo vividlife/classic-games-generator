@@ -8,8 +8,7 @@ const VOICE_PROMPTS = {
   night_start: "天黑了，所有玩家请闭眼",
   werewolf_open: "狼人请睁眼，请选择要猎杀的目标",
   werewolf_close: "狼人请闭眼",
-  witch_open: (playerId: number | null) =>
-    playerId ? `女巫请睁眼，今晚${playerId}号玩家死了，你是否使用解药` : "女巫请睁眼",
+  witch_open: () => "女巫请睁眼",
   witch_close: "女巫请闭眼",
   day_start: "天亮了，所有玩家请睁眼",
 };
@@ -96,8 +95,7 @@ export default function WerewolfDealer() {
     else if (phase === "night_witch" && lastSpokenPhase === "night_werewolf") {
       speak(VOICE_PROMPTS.werewolf_close, true);
       setTimeout(() => {
-        const killedPlayer = nightKillTarget;
-        speak(VOICE_PROMPTS.witch_open(killedPlayer), true);
+        speak(VOICE_PROMPTS.witch_open(), true);
       }, 2000);
       setLastSpokenPhase(phase);
     }
