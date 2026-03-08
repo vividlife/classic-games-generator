@@ -40,6 +40,106 @@ function posHash(p: Position): string {
   return `${p.x},${p.y}`;
 }
 
+// 简单的 BFS 检查玩家是否可以到达某个位置（不推箱子）
+function canReachPosition(
+  map: string[][],
+  start: Position,
+  target: Position,
+  boxes: Position[]
+): boolean {
+  const rows = map.length;
+  const cols = map[0]?.length || 0;
+  const visited = new Set<string>();
+  const queue: Position[] = [start];
+  visited.add(posHash(start));
+
+  const boxSet = new Set(boxes.map(posHash));
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (posEq(current, target)) return true;
+
+    const dirs = [
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
+    ];
+
+    for (const { dx, dy } of dirs) {
+      const nx = current.x + dx;
+      const ny = current.y + dy;
+      const key = posHash({ x: nx, y: ny });
+
+      if (
+        nx >= 0 &&
+        nx < cols &&
+        ny >= 0 &&
+        ny < rows &&
+        map[ny][nx] !== WALL &&
+        !visited.has(key) &&
+        !boxSet.has(key)
+      ) {
+        visited.add(key);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+  }
+
+  return false;
+}
+
+// 检查玩家是否可以到达所有箱子的旁边
+function canReachAllBoxes(
+  map: string[][],
+  player: Position,
+  boxes: Position[],
+  goals: Position[]
+): boolean {
+  for (const box of boxes) {
+    // 检查箱子的四个方向是否有可达的空位
+    const dirs = [
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
+    ];
+
+    let canReach = false;
+    for (const { dx, dy } of dirs) {
+      const besideX = box.x + dx;
+      const besideY = box.y + dy;
+
+      // 检查旁边的位置是否是墙
+      if (
+        besideY < 0 ||
+        besideY >= map.length ||
+        besideX < 0 ||
+        besideX >= map[0]!.length ||
+        map[besideY][besideX] === WALL
+      ) {
+        continue;
+      }
+
+      // 检查旁边的位置是否有其他箱子
+      const hasOtherBox = boxes.some(
+        (b) => !posEq(b, box) && b.x === besideX && b.y === besideY
+      );
+      if (hasOtherBox) continue;
+
+      // 检查玩家是否可以到达这个位置
+      if (canReachPosition(map, player, { x: besideX, y: besideY }, boxes)) {
+        canReach = true;
+        break;
+      }
+    }
+
+    if (!canReach) return false;
+  }
+
+  return true;
+}
+
 function isWall(map: string[], x: number, y: number): boolean {
   if (y < 0 || y >= map.length) return true;
   if (x < 0 || x >= map[y].length) return true;
@@ -314,6 +414,52 @@ function shuffle<T>(array: T[]): T[] {
   return result;
 }
 
+// 检查箱子是否都不在目标位置上
+export function hasBoxOnGoal(boxes: Position[], goals: Position[]): boolean {
+  return boxes.some((box) => goals.some((goal) => posEq(box, goal)));
+}
+
+// 解析关卡地图，返回箱子、目标和玩家位置
+export function parseLevelForValidation(levelMap: string[]): {
+  boxes: Position[];
+  goals: Position[];
+  player: Position;
+} {
+  const boxes: Position[] = [];
+  const goals: Position[] = [];
+  let player: Position = { x: 0, y: 0 };
+
+  const maxWidth = Math.max(...levelMap.map((row) => row.length));
+
+  levelMap.forEach((row, y) => {
+    const paddedRow = row.padEnd(maxWidth, " ");
+    for (let x = 0; x < paddedRow.length; x++) {
+      const cell = paddedRow[x];
+      switch (cell) {
+        case GOAL:
+          goals.push({ x, y });
+          break;
+        case BOX:
+          boxes.push({ x, y });
+          break;
+        case PLAYER:
+          player = { x, y };
+          break;
+        case BOX_ON_GOAL:
+          boxes.push({ x, y });
+          goals.push({ x, y });
+          break;
+        case PLAYER_ON_GOAL:
+          player = { x, y };
+          goals.push({ x, y });
+          break;
+      }
+    }
+  });
+
+  return { boxes, goals, player };
+}
+
 // 使用反向生成法：从完成状态开始，反向移动玩家和箱子
 function generateLevelByReverse(config: GenerationConfig): string[] | null {
   const { width, height, boxCount } = config;
@@ -351,7 +497,7 @@ function generateLevelByReverse(config: GenerationConfig): string[] | null {
     }
   }
 
-  if (floorPositions.length < boxCount * 2 + 2) {
+  if (floorPositions.length < boxCount * 3 + 2) {
     return null; // 空间不够
   }
 
@@ -380,7 +526,8 @@ function generateLevelByReverse(config: GenerationConfig): string[] | null {
   const player = shuffled[playerIdx];
 
   // 6. 反向打乱：通过随机移动来打乱关卡
-  const moves = 200 + boxCount * 50;
+  // 增加打乱次数确保箱子离开目标位置
+  const moves = 400 + boxCount * 100;
   let currentPlayer = { ...player };
   let currentBoxes = boxes.map((b) => ({ ...b }));
 
@@ -424,7 +571,17 @@ function generateLevelByReverse(config: GenerationConfig): string[] | null {
     }
   }
 
-  // 7. 构建最终地图字符串
+  // 7. 验证箱子是否都不在目标位置上
+  if (hasBoxOnGoal(currentBoxes, goals)) {
+    return null; // 还有箱子在目标位置上，重新生成
+  }
+
+  // 8. 验证玩家是否可以到达所有箱子旁边
+  if (!canReachAllBoxes(map, currentPlayer, currentBoxes, goals)) {
+    return null;
+  }
+
+  // 9. 构建最终地图字符串
   const result: string[] = [];
   for (let y = 0; y < height; y++) {
     let row = "";
@@ -468,12 +625,19 @@ export function generateRandomLevel(
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const level = generateLevelByReverse(config);
-    if (level && canSolveLevel(level, 50000)) {
-      return {
-        name: `随机 - ${difficultyNames[difficulty]} #${Date.now().toString(36).toUpperCase()}`,
-        map: level,
-      };
-    }
+    if (!level) continue;
+
+    // 验证关卡有解
+    if (!canSolveLevel(level, 50000)) continue;
+
+    // 最终验证：确保箱子不在目标位置上
+    const { boxes, goals } = parseLevelForValidation(level);
+    if (hasBoxOnGoal(boxes, goals)) continue;
+
+    return {
+      name: `随机 - ${difficultyNames[difficulty]} #${Date.now().toString(36).toUpperCase()}`,
+      map: level,
+    };
   }
 
   return null;
