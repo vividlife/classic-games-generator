@@ -44,15 +44,23 @@ export interface Player {
   id: number;
   role: RoleName;
   revealed: boolean; // 是否已经查看过自己的牌
+  alive: boolean; // 是否存活
 }
 
+export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day";
+
 interface WerewolfState {
-  phase: "setup" | "dealt";
+  phase: GamePhase;
   playerCount: number;
   roleConfig: RoleConfig;
   players: Player[];
   activePlayerId: number | null;
   globalUnlocked: boolean;
+  nightKillTarget: number | null; // 今晚狼人杀的目标
+  witchSaved: boolean; // 女巫是否使用了解药
+  witchUsedSave: boolean; // 女巫是否已经用过解药
+  nightDeaths: number[]; // 今晚死亡的玩家
+  dayCount: number; // 第几天
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -82,6 +90,11 @@ export function useWerewolf() {
     players: [],
     activePlayerId: null,
     globalUnlocked: false,
+    nightKillTarget: null,
+    witchSaved: false,
+    witchUsedSave: false,
+    nightDeaths: [],
+    dayCount: 1,
   }));
 
   const setPlayerCount = useCallback((count: number) => {
@@ -116,6 +129,7 @@ export function useWerewolf() {
         id: i + 1,
         role,
         revealed: false,
+        alive: true,
       }));
 
       return {
@@ -124,6 +138,11 @@ export function useWerewolf() {
         players,
         activePlayerId: null,
         globalUnlocked: false,
+        nightKillTarget: null,
+        witchSaved: false,
+        witchUsedSave: false,
+        nightDeaths: [],
+        dayCount: 1,
       };
     });
   }, []);
@@ -165,6 +184,67 @@ export function useWerewolf() {
       players: [],
       activePlayerId: null,
       globalUnlocked: false,
+      nightKillTarget: null,
+      witchSaved: false,
+      witchUsedSave: false,
+      nightDeaths: [],
+      dayCount: 1,
+    }));
+  }, []);
+
+  // 开始游戏流程
+  const startGame = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      phase: "night_werewolf",
+    }));
+  }, []);
+
+  // 狼人选择杀人目标
+  const werewolfKill = useCallback((targetId: number) => {
+    setState(prev => ({
+      ...prev,
+      nightKillTarget: targetId,
+      phase: "night_witch",
+    }));
+  }, []);
+
+  // 女巫使用解药
+  const witchUseSave = useCallback((useSave: boolean) => {
+    setState(prev => {
+      const newNightDeaths: number[] = [];
+      let newWitchUsedSave = prev.witchUsedSave;
+
+      if (useSave && prev.nightKillTarget) {
+        // 女巫使用了解药，没有人死亡
+        newWitchUsedSave = true;
+      } else if (prev.nightKillTarget) {
+        // 没有使用解药，目标死亡
+        newNightDeaths.push(prev.nightKillTarget);
+      }
+
+      return {
+        ...prev,
+        witchSaved: useSave,
+        witchUsedSave: newWitchUsedSave,
+        nightDeaths: newNightDeaths,
+        players: prev.players.map(p =>
+          newNightDeaths.includes(p.id) ? { ...p, alive: false } : p
+        ),
+        phase: "day",
+      };
+    });
+  }, []);
+
+  // 进入下一夜
+  const nextNight = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      phase: "night_werewolf",
+      nightKillTarget: null,
+      witchSaved: false,
+      nightDeaths: [],
+      dayCount: prev.dayCount + 1,
     }));
   }, []);
 
@@ -184,5 +264,9 @@ export function useWerewolf() {
     hideActive,
     toggleGlobalUnlock,
     resetToSetup,
+    startGame,
+    werewolfKill,
+    witchUseSave,
+    nextNight,
   };
 }

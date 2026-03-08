@@ -1,6 +1,6 @@
 "use client";
 
-import { useWerewolf, ROLES, PRESET_CONFIGS, RoleName } from "@/lib/useWerewolf";
+import { useWerewolf, ROLES, PRESET_CONFIGS, RoleName, GamePhase } from "@/lib/useWerewolf";
 
 const ALL_ROLES: RoleName[] = ["狼人", "村民", "预言家", "女巫", "猎人", "守卫"];
 
@@ -13,6 +13,10 @@ export default function WerewolfDealer() {
     activePlayerId,
     globalUnlocked,
     totalRoles,
+    nightKillTarget,
+    witchUsedSave,
+    nightDeaths,
+    dayCount,
     setPlayerCount,
     setRoleConfig,
     applyPreset,
@@ -21,6 +25,10 @@ export default function WerewolfDealer() {
     hideActive,
     toggleGlobalUnlock,
     resetToSetup,
+    startGame,
+    werewolfKill,
+    witchUseSave,
+    nextNight,
   } = useWerewolf();
 
   const adjustRole = (role: RoleName, delta: number) => {
@@ -150,138 +158,355 @@ export default function WerewolfDealer() {
   }
 
   // ─── Dealt Phase ───────────────────────────────────────────────────────────
-  const activePlayer = players.find(p => p.id === activePlayerId);
-  const allRevealed = players.length > 0 && players.every(p => p.revealed);
+  if (phase === "dealt") {
+    const activePlayer = players.find(p => p.id === activePlayerId);
+    const allRevealed = players.length > 0 && players.every(p => p.revealed);
 
-  return (
-    <div className="max-w-lg mx-auto">
-      <div className="text-center mb-6">
-        <div className="text-5xl mb-2">🐺</div>
-        <h1 className="text-2xl font-bold text-white">狼人杀发牌工具</h1>
-        <p className="text-slate-400 mt-1 text-sm">
-          {globalUnlocked 
-            ? "游戏结束 - 上帝视角已开启" 
-            : allRevealed 
-              ? "所有玩家已查看身份，可解锁上帝视角" 
-              : "点击编号查看自己的身份（每人限看一次）"}
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">🐺</div>
+          <h1 className="text-2xl font-bold text-white">狼人杀发牌工具</h1>
+          <p className="text-slate-400 mt-1 text-sm">
+            {globalUnlocked
+              ? "游戏结束 - 上帝视角已开启"
+              : allRevealed
+                ? "所有玩家已查看身份，可以开始游戏"
+                : "点击编号查看自己的身份（每人限看一次）"}
+          </p>
+        </div>
+
+        {/* Controls */}
+        <div className="flex gap-3 mb-6">
+          {allRevealed && !globalUnlocked && (
+            <button
+              onClick={startGame}
+              className="flex-1 py-3 rounded-xl font-semibold text-sm bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/30 transition-all"
+            >
+              🌙 开始游戏
+            </button>
+          )}
+          <button
+            onClick={toggleGlobalUnlock}
+            className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
+              globalUnlocked
+                ? "bg-red-600 hover:bg-red-500 text-white ring-2 ring-red-400/50"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {globalUnlocked ? "🔓 游戏已结束" : "🔒 解锁上帝视角"}
+          </button>
+          <button
+            onClick={resetToSetup}
+            className="flex-1 py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
+          >
+            🔄 重新发牌
+          </button>
+        </div>
+
+        {/* Player grid */}
+        <div className="grid grid-cols-4 gap-3">
+          {players.map(player => {
+            const role = ROLES[player.role];
+            const isRevealed = player.revealed;
+
+            // 已查看但未解锁上帝视角的格子显示锁定状态
+            const isLocked = isRevealed && !globalUnlocked;
+
+            return (
+              <button
+                key={player.id}
+                onClick={() => !globalUnlocked && !isLocked && revealPlayer(player.id)}
+                disabled={isLocked}
+                className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
+                  globalUnlocked
+                    ? role.team === "狼人"
+                      ? "border-red-500/60 bg-red-900/20 cursor-default"
+                      : "border-blue-500/40 bg-blue-900/10 cursor-default"
+                    : isLocked
+                      ? "border-slate-500/30 bg-slate-700/50 cursor-not-allowed opacity-60"
+                      : "border-slate-600 bg-slate-800 hover:border-purple-500/60 hover:bg-slate-700 active:bg-slate-600 cursor-pointer"
+                }`}
+              >
+                {isLocked && !globalUnlocked && (
+                  <span className="absolute top-1 right-1 text-sm">🔒</span>
+                )}
+                <span className="text-xl font-bold text-white leading-none">
+                  {player.id}
+                </span>
+                {globalUnlocked && (
+                  <>
+                    <span className="text-2xl mt-1 leading-none">{role.emoji}</span>
+                    <span
+                      className={`text-xs mt-0.5 font-medium ${
+                        role.team === "狼人" ? "text-red-300" : "text-blue-300"
+                      }`}
+                    >
+                      {role.name}
+                    </span>
+                  </>
+                )}
+                {isLocked && !globalUnlocked && (
+                  <span className="text-xs text-slate-400 mt-1">已查看</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-center text-slate-600 text-xs mt-6">
+          共 {players.length} 名玩家 ·{" "}
+          {players.filter(p => ROLES[p.role].team === "狼人").length} 只狼人
+          {!globalUnlocked && ` · 已查看 ${players.filter(p => p.revealed).length} 人`}
         </p>
-      </div>
 
-      {/* Controls */}
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={toggleGlobalUnlock}
-          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
-            globalUnlocked
-              ? "bg-red-600 hover:bg-red-500 text-white ring-2 ring-red-400/50"
-              : "bg-slate-700 hover:bg-slate-600 text-slate-300"
-          }`}
-        >
-          {globalUnlocked ? "🔓 游戏已结束" : "🔒 解锁上帝视角（结束游戏）"}
-        </button>
+        {/* Role reveal overlay */}
+        {activePlayer && !globalUnlocked && (
+          <div
+            className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center"
+            onClick={hideActive}
+          >
+            <div
+              className="text-center px-8 py-10 rounded-3xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <p className="text-slate-500 text-sm mb-8 tracking-widest uppercase">
+                玩家 {activePlayer.id} 的身份
+              </p>
+              <div className="text-9xl mb-6">{ROLES[activePlayer.role].emoji}</div>
+              <div
+                className={`text-5xl font-black mb-4 ${
+                  ROLES[activePlayer.role].team === "狼人"
+                    ? "text-red-400"
+                    : "text-sky-300"
+                }`}
+              >
+                {activePlayer.role}
+              </div>
+              <p className="text-slate-400 text-base mb-6">
+                {ROLES[activePlayer.role].description}
+              </p>
+              <span
+                className={`inline-block px-4 py-1.5 rounded-full text-sm font-medium ${
+                  ROLES[activePlayer.role].team === "狼人"
+                    ? "bg-red-900/60 text-red-300"
+                    : "bg-sky-900/60 text-sky-300"
+                }`}
+              >
+                {ROLES[activePlayer.role].team}阵营
+              </span>
+            </div>
+            <p className="text-slate-600 text-sm mt-10">点击任意处隐藏</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Night Werewolf Phase ───────────────────────────────────────────────────────
+  if (phase === "night_werewolf") {
+    const werewolves = players.filter(p => p.role === "狼人" && p.alive);
+    const validTargets = players.filter(p => p.alive && p.role !== "狼人");
+
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">🌙</div>
+          <h1 className="text-2xl font-bold text-white">第 {dayCount} 夜</h1>
+          <p className="text-purple-400 mt-2 text-lg font-semibold">狼人请睁眼</p>
+          <p className="text-slate-400 mt-1 text-sm">选择要猎杀的玩家</p>
+        </div>
+
+        {/* Werewolf list */}
+        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-4">
+          <p className="text-slate-400 text-sm mb-2">在场狼人：</p>
+          <div className="flex gap-2 flex-wrap">
+            {werewolves.map(w => (
+              <span key={w.id} className="px-3 py-1 bg-red-900/50 text-red-300 rounded-lg text-sm">
+                {w.id}号
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Player grid - select target */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          {players.map(player => {
+            const role = ROLES[player.role];
+            const isWerewolf = player.role === "狼人";
+            const isValidTarget = !isWerewolf && player.alive;
+
+            return (
+              <button
+                key={player.id}
+                onClick={() => isValidTarget && werewolfKill(player.id)}
+                disabled={!isValidTarget}
+                className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
+                  !player.alive
+                    ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
+                    : isWerewolf
+                      ? "border-red-500/60 bg-red-900/20 cursor-not-allowed"
+                      : "border-purple-500/40 bg-purple-900/20 hover:bg-purple-800/40 hover:border-purple-400 cursor-pointer"
+                }`}
+              >
+                {!player.alive && <span className="absolute top-1 right-1 text-sm">💀</span>}
+                <span className="text-xl font-bold text-white leading-none">{player.id}</span>
+                {isWerewolf && <span className="text-2xl mt-1">{role.emoji}</span>}
+                {isWerewolf && <span className="text-xs text-red-300 mt-0.5">狼人</span>}
+                {!isWerewolf && player.alive && (
+                  <span className="text-xs text-purple-300 mt-1">可选择</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
         <button
           onClick={resetToSetup}
-          className="flex-1 py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
+          className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
         >
-          🔄 重新发牌
+          🔄 结束游戏
         </button>
       </div>
+    );
+  }
 
-      {/* Player grid */}
-      <div className="grid grid-cols-4 gap-3">
-        {players.map(player => {
-          const role = ROLES[player.role];
-          const isRevealed = player.revealed;
-          
-          // 已查看但未解锁上帝视角的格子显示锁定状态
-          const isLocked = isRevealed && !globalUnlocked;
-          
-          return (
-            <button
-              key={player.id}
-              onClick={() => !globalUnlocked && !isLocked && revealPlayer(player.id)}
-              disabled={isLocked}
-              className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
-                globalUnlocked
-                  ? role.team === "狼人"
-                    ? "border-red-500/60 bg-red-900/20 cursor-default"
-                    : "border-blue-500/40 bg-blue-900/10 cursor-default"
-                  : isLocked
-                    ? "border-slate-500/30 bg-slate-700/50 cursor-not-allowed opacity-60"
-                    : "border-slate-600 bg-slate-800 hover:border-purple-500/60 hover:bg-slate-700 active:bg-slate-600 cursor-pointer"
-              }`}
-            >
-              {isLocked && !globalUnlocked && (
-                <span className="absolute top-1 right-1 text-sm">🔒</span>
-              )}
-              <span className="text-xl font-bold text-white leading-none">
-                {player.id}
-              </span>
-              {globalUnlocked && (
-                <>
-                  <span className="text-2xl mt-1 leading-none">{role.emoji}</span>
-                  <span
-                    className={`text-xs mt-0.5 font-medium ${
-                      role.team === "狼人" ? "text-red-300" : "text-blue-300"
-                    }`}
-                  >
-                    {role.name}
-                  </span>
-                </>
-              )}
-              {isLocked && !globalUnlocked && (
-                <span className="text-xs text-slate-400 mt-1">已查看</span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+  // ─── Night Witch Phase ───────────────────────────────────────────────────────
+  if (phase === "night_witch") {
+    const witch = players.find(p => p.role === "女巫" && p.alive);
+    const killedPlayer = nightKillTarget ? players.find(p => p.id === nightKillTarget) : null;
 
-      <p className="text-center text-slate-600 text-xs mt-6">
-        共 {players.length} 名玩家 ·{" "}
-        {players.filter(p => ROLES[p.role].team === "狼人").length} 只狼人
-        {!globalUnlocked && ` · 已查看 ${players.filter(p => p.revealed).length} 人`}
-      </p>
-
-      {/* Role reveal overlay */}
-      {activePlayer && !globalUnlocked && (
-        <div
-          className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center"
-          onClick={hideActive}
-        >
-          <div
-            className="text-center px-8 py-10 rounded-3xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <p className="text-slate-500 text-sm mb-8 tracking-widest uppercase">
-              玩家 {activePlayer.id} 的身份
-            </p>
-            <div className="text-9xl mb-6">{ROLES[activePlayer.role].emoji}</div>
-            <div
-              className={`text-5xl font-black mb-4 ${
-                ROLES[activePlayer.role].team === "狼人"
-                  ? "text-red-400"
-                  : "text-sky-300"
-              }`}
-            >
-              {activePlayer.role}
-            </div>
-            <p className="text-slate-400 text-base mb-6">
-              {ROLES[activePlayer.role].description}
-            </p>
-            <span
-              className={`inline-block px-4 py-1.5 rounded-full text-sm font-medium ${
-                ROLES[activePlayer.role].team === "狼人"
-                  ? "bg-red-900/60 text-red-300"
-                  : "bg-sky-900/60 text-sky-300"
-              }`}
-            >
-              {ROLES[activePlayer.role].team}阵营
-            </span>
-          </div>
-          <p className="text-slate-600 text-sm mt-10">点击任意处隐藏</p>
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">🌙</div>
+          <h1 className="text-2xl font-bold text-white">第 {dayCount} 夜</h1>
+          <p className="text-purple-400 mt-2 text-lg font-semibold">女巫请睁眼</p>
+          <p className="text-slate-400 mt-1 text-sm">
+            {witchUsedSave ? "你的解药已使用" : "今晚有人被杀，要使用解药吗？"}
+          </p>
         </div>
-      )}
-    </div>
-  );
+
+        {/* Killed player info */}
+        {killedPlayer && (
+          <div className="bg-red-900/30 border border-red-500/40 rounded-2xl p-6 mb-6 text-center">
+            <p className="text-red-300 text-sm mb-3">今晚被杀的是</p>
+            <div className="text-6xl mb-2">{ROLES[killedPlayer.role].emoji}</div>
+            <div className="text-3xl font-bold text-white">{killedPlayer.id}号玩家</div>
+            {witchUsedSave && (
+              <p className="text-red-400 text-sm mt-3">你的解药已经用完了</p>
+            )}
+          </div>
+        )}
+
+        {/* Witch actions */}
+        {!witchUsedSave && witch && (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button
+              onClick={() => witchUseSave(true)}
+              className="py-4 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-bold text-lg transition-all"
+            >
+              ✨ 使用解药
+            </button>
+            <button
+              onClick={() => witchUseSave(false)}
+              className="py-4 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg transition-all"
+            >
+              ⏭️ 不使用
+            </button>
+          </div>
+        )}
+
+        {/* If no witch or witch used save, continue */}
+        {(!witch || witchUsedSave) && (
+          <button
+            onClick={() => witchUseSave(false)}
+            className="w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all"
+          >
+            天亮了 →
+          </button>
+        )}
+
+        <button
+          onClick={resetToSetup}
+          className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all mt-3"
+        >
+          🔄 结束游戏
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Day Phase ───────────────────────────────────────────────────────
+  if (phase === "day") {
+    return (
+      <div className="max-w-lg mx-auto">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">☀️</div>
+          <h1 className="text-2xl font-bold text-white">第 {dayCount} 天</h1>
+          <p className="text-yellow-400 mt-2 text-lg font-semibold">天亮了</p>
+        </div>
+
+        {/* Death announcement */}
+        <div className={`rounded-2xl p-6 mb-6 text-center border ${
+          nightDeaths.length > 0
+            ? "bg-red-900/30 border-red-500/40"
+            : "bg-green-900/30 border-green-500/40"
+        }`}>
+          {nightDeaths.length > 0 ? (
+            <>
+              <p className="text-red-300 text-sm mb-3">昨晚</p>
+              <div className="flex gap-3 justify-center flex-wrap">
+                {nightDeaths.map(id => {
+                  const player = players.find(p => p.id === id);
+                  return player ? (
+                    <div key={id} className="text-center">
+                      <div className="text-5xl mb-1">💀</div>
+                      <div className="text-2xl font-bold text-white">{id}号玩家</div>
+                      <div className="text-lg">{ROLES[player.role].emoji} {player.role}</div>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+              <p className="text-red-300 text-sm mt-4">死亡</p>
+            </>
+          ) : (
+            <>
+              <div className="text-5xl mb-2">🎉</div>
+              <p className="text-green-300 text-lg font-semibold">昨晚是平安夜</p>
+              <p className="text-green-400 text-sm mt-2">没有人死亡</p>
+            </>
+          )}
+        </div>
+
+        {/* Alive players */}
+        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-6">
+          <p className="text-slate-400 text-sm mb-3">存活玩家：</p>
+          <div className="flex gap-2 flex-wrap">
+            {players.filter(p => p.alive).map(p => (
+              <span key={p.id} className="px-3 py-2 bg-slate-700 text-white rounded-lg">
+                {p.id}号 {ROLES[p.role].emoji}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={nextNight}
+            className="py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all"
+          >
+            🌙 入夜
+          </button>
+          <button
+            onClick={resetToSetup}
+            className="py-4 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg transition-all"
+          >
+            🔄 结束游戏
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
