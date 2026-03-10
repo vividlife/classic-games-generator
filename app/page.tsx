@@ -242,11 +242,14 @@ export default function Home() {
               围棋
             </h2>
             <p className="text-slate-400 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
-              经典围棋双人对战，提子、打劫、禁入点，支持9×9、13×13、19×19！
+              经典围棋，支持双人对战和 AI 模式，提子、打劫、禁入点！
             </p>
             <div className="flex flex-wrap gap-1.5 text-[10px] sm:text-xs">
               <span className="bg-stone-900/50 text-stone-300 px-2 py-0.5 sm:py-1 rounded">
                 双人对战
+              </span>
+              <span className="bg-amber-900/50 text-amber-300 px-2 py-0.5 sm:py-1 rounded">
+                AI 模式
               </span>
               <span className="bg-slate-700 text-slate-300 px-2 py-0.5 sm:py-1 rounded">
                 三种棋盘

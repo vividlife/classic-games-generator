@@ -6,6 +6,7 @@ export type BoardSize = 9 | 13 | 19;
 export type GoCell = "black" | "white" | null;
 export type GoPlayer = "black" | "white";
 export type GoStatus = "idle" | "playing" | "gameover";
+export type GoMode = "pvp" | "ai";
 
 interface GoSnapshot {
   board: GoCell[][];
@@ -22,6 +23,8 @@ interface GoState {
   boardSize: BoardSize;
   currentPlayer: GoPlayer;
   status: GoStatus;
+  mode: GoMode;
+  aiPlayer: GoPlayer; // which color is AI
   winner: GoPlayer | null;
   winReason: "resign" | "pass" | null;
   capturedByBlack: number; // white stones captured by black
@@ -36,7 +39,7 @@ type GoAction =
   | { type: "PLACE_STONE"; row: number; col: number }
   | { type: "PASS" }
   | { type: "RESIGN"; player: GoPlayer }
-  | { type: "START"; boardSize: BoardSize }
+  | { type: "START"; boardSize: BoardSize; mode: GoMode }
   | { type: "RESET" }
   | { type: "UNDO" };
 
@@ -137,6 +140,8 @@ function getInitialState(): GoState {
     boardSize,
     currentPlayer: "black",
     status: "idle",
+    mode: "pvp",
+    aiPlayer: "white",
     winner: null,
     winReason: null,
     capturedByBlack: 0,
@@ -169,6 +174,8 @@ function goReducer(state: GoState, action: GoAction): GoState {
         boardSize: size,
         board: createBoard(size),
         status: "playing",
+        mode: action.mode,
+        aiPlayer: "white",
       };
     }
 
@@ -177,7 +184,9 @@ function goReducer(state: GoState, action: GoAction): GoState {
 
     case "UNDO": {
       if (state.status !== "playing" || state.history.length === 0) return state;
-      const prev = state.history[state.history.length - 1];
+      // In AI mode, undo 2 steps (player + AI) to get back to player's turn
+      const steps = state.mode === "ai" && state.history.length >= 2 ? 2 : 1;
+      const prev = state.history[state.history.length - steps];
       return {
         ...state,
         board: prev.board,
@@ -187,7 +196,7 @@ function goReducer(state: GoState, action: GoAction): GoState {
         lastMove: prev.lastMove,
         koPoint: prev.koPoint,
         consecutivePasses: prev.consecutivePasses,
-        history: state.history.slice(0, -1),
+        history: state.history.slice(0, -steps),
       };
     }
 
@@ -272,8 +281,8 @@ export function useGo() {
     dispatch({ type: "RESIGN", player });
   }, []);
 
-  const start = useCallback((boardSize: BoardSize) => {
-    dispatch({ type: "START", boardSize });
+  const start = useCallback((boardSize: BoardSize, mode: GoMode = "pvp") => {
+    dispatch({ type: "START", boardSize, mode });
   }, []);
 
   const reset = useCallback(() => {

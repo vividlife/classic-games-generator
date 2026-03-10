@@ -4,7 +4,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "围棋 - 荣升的游戏小站",
-  description: "经典围棋双人对战，支持9x9、13x13、19x19棋盘，含提子、禁入点、打劫规则",
+  description: "经典围棋，支持双人对战和 AI 模式，9x9、13x13、19x19棋盘，含提子、禁入点、打劫规则",
 };
 
 export default function GoPage() {
