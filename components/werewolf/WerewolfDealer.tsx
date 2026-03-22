@@ -427,9 +427,6 @@ export default function WerewolfDealer() {
 
   // ─── Night Werewolf Phase ───────────────────────────────────────────────────────
   if (phase === "night_werewolf") {
-    const werewolves = players.filter(p => p.role === "狼人" && p.alive);
-    const alivePlayers = players.filter(p => p.alive);
-
     return (
       <div className="max-w-lg mx-auto">
         {/* Voice toggle button */}
@@ -453,23 +450,9 @@ export default function WerewolfDealer() {
           <p className="text-slate-400 mt-1 text-sm">选择要猎杀的玩家</p>
         </div>
 
-        {/* Werewolf list */}
-        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 mb-4">
-          <p className="text-slate-400 text-sm mb-2">在场狼人（红色边框）：</p>
-          <div className="flex gap-2 flex-wrap">
-            {werewolves.map(w => (
-              <span key={w.id} className="px-3 py-1 bg-red-900/50 text-red-300 rounded-lg text-sm">
-                {w.id}号
-              </span>
-            ))}
-          </div>
-        </div>
-
         {/* Player grid - select target */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           {players.map(player => {
-            const role = ROLES[player.role];
-            const isWerewolf = player.role === "狼人";
             const isValidTarget = player.alive;
 
             return (
@@ -480,20 +463,13 @@ export default function WerewolfDealer() {
                 className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
                   !player.alive
                     ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
-                    : isWerewolf
-                      ? "border-red-500/60 bg-red-900/20 hover:bg-red-800/40 hover:border-red-400 cursor-pointer"
-                      : "border-purple-500/40 bg-purple-900/20 hover:bg-purple-800/40 hover:border-purple-400 cursor-pointer"
+                    : "border-purple-500/40 bg-purple-900/20 hover:bg-purple-800/40 hover:border-purple-400 cursor-pointer"
                 }`}
               >
                 {!player.alive && <span className="absolute top-1 right-1 text-sm">💀</span>}
                 <span className="text-xl font-bold text-white leading-none">{player.id}</span>
-                {isWerewolf && <span className="text-2xl mt-1">{role.emoji}</span>}
-                {isWerewolf && <span className="text-xs text-red-300 mt-0.5">狼人</span>}
-                {!isWerewolf && player.alive && (
+                {player.alive && (
                   <span className="text-xs text-purple-300 mt-1">可选择</span>
-                )}
-                {isWerewolf && player.alive && (
-                  <span className="text-xs text-red-300 mt-1">可选择</span>
                 )}
               </button>
             );
