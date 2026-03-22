@@ -11,6 +11,7 @@ const VOICE_PROMPTS = {
   witch_open: () => "女巫请睁眼",
   witch_close: "女巫请闭眼",
   day_start: "天亮了，所有玩家请睁眼",
+  sheriff_election_start: "天亮了，所有玩家请睁眼。现在开始争夺警长，请各位发言竞选或推荐候选人",
   assassination_start: "狼人阵营即将失败，但还有最后一次刺杀机会！",
 };
 
@@ -71,6 +72,7 @@ export default function WerewolfDealer() {
     toggleVoice,
     setLastSpokenPhase,
     werewolfAssassinate,
+    confirmSheriffElection,
   } = useWerewolf();
 
   // 跟踪上一个阶段，用于检测阶段变化
@@ -100,6 +102,14 @@ export default function WerewolfDealer() {
       speak(VOICE_PROMPTS.werewolf_close, true);
       setTimeout(() => {
         speak(VOICE_PROMPTS.witch_open(), true);
+      }, 2000);
+      setLastSpokenPhase(phase);
+    }
+    // 当进入争警长环节时，播放"女巫请闭眼"和"天亮了，开始争警长"
+    else if (phase === "day_sheriff_election" && lastSpokenPhase === "night_witch") {
+      speak(VOICE_PROMPTS.witch_close, true);
+      setTimeout(() => {
+        speak(VOICE_PROMPTS.sheriff_election_start, true);
       }, 2000);
       setLastSpokenPhase(phase);
     }
@@ -559,6 +569,53 @@ export default function WerewolfDealer() {
         <button
           onClick={() => endGameManually()}
           className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all mt-3"
+        >
+          🏁 结束游戏
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Day Sheriff Election Phase ──────────────────────────────────────
+  if (phase === "day_sheriff_election") {
+    return (
+      <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">☀️</div>
+          <h1 className="text-2xl font-bold text-white">第 {dayCount} 天</h1>
+          <p className="text-yellow-400 mt-2 text-lg font-semibold">天亮了 — 争夺警长</p>
+        </div>
+
+        <div className="bg-yellow-900/30 border border-yellow-500/40 rounded-2xl p-6 mb-6 text-center">
+          <div className="text-5xl mb-3">⭐</div>
+          <p className="text-yellow-300 text-base font-semibold mb-2">警长竞选环节</p>
+          <p className="text-slate-400 text-sm">请各位玩家发言竞选或推荐候选人，完成投票后点击下方按钮继续</p>
+        </div>
+
+        <button
+          onClick={confirmSheriffElection}
+          className="w-full py-4 rounded-2xl bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-lg transition-all mb-4"
+        >
+          ✅ 警长已选出，公布昨晚死亡
+        </button>
+
+        <button
+          onClick={() => endGameManually()}
+          className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
         >
           🏁 结束游戏
         </button>

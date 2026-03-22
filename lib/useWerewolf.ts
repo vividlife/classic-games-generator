@@ -47,7 +47,7 @@ export interface Player {
   alive: boolean; // 是否存活
 }
 
-export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day" | "werewolf_assassination" | "game_over";
+export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day_sheriff_election" | "day" | "werewolf_assassination" | "game_over";
 
 interface WerewolfState {
   phase: GamePhase;
@@ -359,7 +359,15 @@ export function useWerewolf() {
       // 检查游戏是否结束
       const winner = checkGameEnd(newPlayers);
       const needsAssassination = !!(winner && shouldEnterAssassination(newPlayers, winner));
-      const newPhase = needsAssassination ? "werewolf_assassination" : (winner ? "game_over" : "day");
+      // 第一天天亮后先进入争警长环节，再公布首夜死亡情况
+      const isFirstDay = prev.dayCount === 1;
+      const newPhase = needsAssassination
+        ? "werewolf_assassination"
+        : winner
+          ? "game_over"
+          : isFirstDay
+            ? "day_sheriff_election"
+            : "day";
 
       return {
         ...prev,
@@ -432,6 +440,11 @@ export function useWerewolf() {
     });
   }, []);
 
+  // 争警长结束，进入白天公布死亡信息
+  const confirmSheriffElection = useCallback(() => {
+    setState(prev => ({ ...prev, phase: "day" }));
+  }, []);
+
   // 简化投票：直接处决玩家或选择无人出局
   const voteOutPlayer = useCallback((targetId: number | null) => {
     setState(prev => {
@@ -489,5 +502,6 @@ export function useWerewolf() {
     toggleVoice,
     setLastSpokenPhase,
     werewolfAssassinate,
+    confirmSheriffElection,
   };
 }
