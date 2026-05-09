@@ -60,6 +60,12 @@ export default function SnakeGame() {
               {game.snake.length}
             </div>
           </div>
+          <div className="text-center">
+            <div className="text-slate-400 text-xs">速度</div>
+            <div className="font-mono font-bold text-emerald-400 text-xl">
+              ×{game.level}
+            </div>
+          </div>
         </div>
 
         {/* Board */}

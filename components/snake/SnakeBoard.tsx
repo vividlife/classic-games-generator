@@ -35,15 +35,16 @@ const SnakeBoard = memo(function SnakeBoard({ snake, food, theme }: SnakeBoardPr
         }}
       />
 
-      {/* Food */}
+      {/* Food with pulse animation */}
       <div
-        className={`absolute ${theme.food} rounded-full`}
+        className={`absolute ${theme.food} rounded-full animate-pulse`}
         style={{
           width: CELL_SIZE - 2,
           height: CELL_SIZE - 2,
           left: food.x * CELL_SIZE + 1,
           top: food.y * CELL_SIZE + 1,
-          boxShadow: "0 0 8px currentColor",
+          boxShadow: "0 0 12px currentColor, 0 0 24px currentColor",
+          transition: "left 0.1s, top 0.1s",
         }}
       />
 
