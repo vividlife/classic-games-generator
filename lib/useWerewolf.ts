@@ -399,7 +399,7 @@ export function useWerewolf() {
   const seerCheck = useCallback((targetId: number) => {
     setState(prev => {
       const target = prev.players.find(p => p.id === targetId);
-      if (prev.phase !== "night_seer" || !target || !target.alive) return prev;
+      if (prev.phase !== "night_seer" || prev.seerCheckTarget !== null || !target || !target.alive) return prev;
       return {
         ...prev,
         seerCheckTarget: targetId,
