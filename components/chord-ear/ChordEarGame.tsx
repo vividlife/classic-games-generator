@@ -42,6 +42,8 @@ const NOTES: SolfegeNote[] = [
 const NOTE_BY_ID = Object.fromEntries(NOTES.map(note => [note.id, note])) as Record<NoteId, SolfegeNote>;
 const DEFAULT_STATS: EarStats = { total: 0, correct: 0, streak: 0, bestStreak: 0, matches: 0 };
 const STATS_KEY = "classic-games-generator:chord-ear:stats";
+const SINGLE_NOTE_VOLUME = 0.42;
+const CHORD_NOTE_VOLUME = 0.2;
 
 const MODES: { id: Mode; label: string; description: string }[] = [
   { id: "learn", label: "学习", description: "听单音、看答案、熟悉音高" },
@@ -147,7 +149,7 @@ export default function ChordEarGame() {
       oscillator.type = "sine";
       oscillator.frequency.setValueAtTime(note.hz, start);
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(asChord ? 0.12 : 0.22, start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(asChord ? CHORD_NOTE_VOLUME : SINGLE_NOTE_VOLUME, start + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
       oscillator.connect(gain);
