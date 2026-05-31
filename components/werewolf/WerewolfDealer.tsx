@@ -853,7 +853,7 @@ export default function WerewolfDealer() {
               <div className="flex gap-2 flex-wrap">
                 {alivePlayers.map(p => (
                   <span key={p.id} className="px-3 py-2 bg-slate-700 text-white rounded-lg">
-                    {p.id}号 {ROLES[p.role].emoji}
+                    {p.id}号 <span className="text-green-400">●</span>
                   </span>
                 ))}
               </div>
