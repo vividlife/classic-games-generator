@@ -8,6 +8,8 @@ const VOICE_PROMPTS = {
   night_start: "天黑了，所有玩家请闭眼",
   werewolf_open: "狼人请睁眼，请选择要猎杀的目标",
   werewolf_close: "狼人请闭眼",
+  seer_open: "预言家请睁眼，请选择一名玩家查验身份",
+  seer_close: "预言家请闭眼",
   witch_open: () => "女巫请睁眼",
   witch_close: "女巫请闭眼",
   day_start: "天亮了，所有玩家请睁眼",
@@ -45,6 +47,7 @@ export default function WerewolfDealer() {
     globalUnlocked,
     totalRoles,
     nightKillTarget,
+    seerCheckTarget,
     witchUsedSave,
     nightDeaths,
     dayCount,
@@ -65,6 +68,8 @@ export default function WerewolfDealer() {
     resetToSetup,
     startGame,
     werewolfKill,
+    seerCheck,
+    finishSeerCheck,
     witchUseSave,
     nextNight,
     endGameManually,
@@ -105,17 +110,51 @@ export default function WerewolfDealer() {
       }, 2000);
       setLastSpokenPhase(phase);
     }
+    // 当进入预言家阶段时，先播放"狼人请闭眼"，再播放预言家提示
+    else if (phase === "night_seer" && lastSpokenPhase === "night_werewolf") {
+      speak(VOICE_PROMPTS.werewolf_close, true);
+      setTimeout(() => {
+        speak(VOICE_PROMPTS.seer_open, true);
+      }, 2000);
+      setLastSpokenPhase(phase);
+    }
+    // 当预言家之后进入女巫阶段时，先播放"预言家请闭眼"
+    else if (phase === "night_witch" && lastSpokenPhase === "night_seer") {
+      speak(VOICE_PROMPTS.seer_close, true);
+      setTimeout(() => {
+        speak(VOICE_PROMPTS.witch_open(), true);
+      }, 2000);
+      setLastSpokenPhase(phase);
+    }
     // 当进入争警长环节时，播放"女巫请闭眼"和"天亮了，开始争警长"
-    else if (phase === "day_sheriff_election" && lastSpokenPhase === "night_witch") {
-      speak(VOICE_PROMPTS.witch_close, true);
+    else if (
+      phase === "day_sheriff_election" &&
+      (lastSpokenPhase === "night_witch" || lastSpokenPhase === "night_seer" || lastSpokenPhase === "night_werewolf")
+    ) {
+      const closePrompt =
+        lastSpokenPhase === "night_witch"
+          ? VOICE_PROMPTS.witch_close
+          : lastSpokenPhase === "night_seer"
+            ? VOICE_PROMPTS.seer_close
+            : VOICE_PROMPTS.werewolf_close;
+      speak(closePrompt, true);
       setTimeout(() => {
         speak(VOICE_PROMPTS.sheriff_election_start, true);
       }, 2000);
       setLastSpokenPhase(phase);
     }
     // 当进入白天时，播放"女巫请闭眼"和"天亮了"
-    else if (phase === "day" && lastSpokenPhase === "night_witch") {
-      speak(VOICE_PROMPTS.witch_close, true);
+    else if (
+      phase === "day" &&
+      (lastSpokenPhase === "night_witch" || lastSpokenPhase === "night_seer" || lastSpokenPhase === "night_werewolf")
+    ) {
+      const closePrompt =
+        lastSpokenPhase === "night_witch"
+          ? VOICE_PROMPTS.witch_close
+          : lastSpokenPhase === "night_seer"
+            ? VOICE_PROMPTS.seer_close
+            : VOICE_PROMPTS.werewolf_close;
+      speak(closePrompt, true);
       setTimeout(() => {
         speak(VOICE_PROMPTS.day_start, true);
       }, 2000);
@@ -489,6 +528,117 @@ export default function WerewolfDealer() {
         <button
           onClick={() => endGameManually()}
           className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
+        >
+          🏁 结束游戏
+        </button>
+      </div>
+    );
+  }
+
+  // ─── Night Seer Phase ───────────────────────────────────────────────────────
+  if (phase === "night_seer") {
+    const seer = players.find(p => p.role === "预言家" && p.alive);
+    const checkedPlayer = seerCheckTarget ? players.find(p => p.id === seerCheckTarget) : null;
+    const checkedTeam = checkedPlayer ? ROLES[checkedPlayer.role].team : null;
+
+    return (
+      <div className="max-w-lg mx-auto">
+        {/* Voice toggle button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleVoice}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+              voiceEnabled
+                ? "bg-green-600 hover:bg-green-500 text-white"
+                : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+            }`}
+          >
+            {voiceEnabled ? "🔊 语音开启" : "🔇 语音关闭"}
+          </button>
+        </div>
+
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-2">🔮</div>
+          <h1 className="text-2xl font-bold text-white">第 {dayCount} 夜</h1>
+          <p className="text-sky-400 mt-2 text-lg font-semibold">预言家请睁眼</p>
+          <p className="text-slate-400 mt-1 text-sm">
+            {checkedPlayer ? "查验完成，请记住结果" : "选择一名玩家查验阵营"}
+          </p>
+        </div>
+
+        {!seer && (
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 mb-6 text-center">
+            <p className="text-slate-300 text-sm">本局没有存活的预言家</p>
+          </div>
+        )}
+
+        {checkedPlayer && checkedTeam && (
+          <div
+            className={`rounded-2xl p-6 mb-6 text-center border ${
+              checkedTeam === "狼人"
+                ? "bg-red-900/30 border-red-500/40"
+                : "bg-sky-900/30 border-sky-500/40"
+            }`}
+          >
+            <p className="text-slate-300 text-sm mb-3">查验结果</p>
+            <div className="text-4xl font-bold text-white mb-2">
+              {checkedPlayer.id}号玩家
+            </div>
+            <div
+              className={`text-2xl font-black ${
+                checkedTeam === "狼人" ? "text-red-400" : "text-sky-300"
+              }`}
+            >
+              {checkedTeam}阵营
+            </div>
+          </div>
+        )}
+
+        {!checkedPlayer && (
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            {players.map(player => {
+              const isValidTarget = !!seer && player.alive;
+
+              return (
+                <button
+                  key={player.id}
+                  onClick={() => isValidTarget && seerCheck(player.id)}
+                  disabled={!isValidTarget}
+                  className={`relative aspect-square rounded-xl border-2 flex flex-col items-center justify-center transition-all select-none ${
+                    !player.alive
+                      ? "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
+                      : isValidTarget
+                        ? "border-sky-500/40 bg-sky-900/20 hover:bg-sky-800/40 hover:border-sky-400 cursor-pointer"
+                        : "border-slate-700 bg-slate-900/50 opacity-40 cursor-not-allowed"
+                  }`}
+                >
+                  {!player.alive && <span className="absolute top-1 right-1 text-sm">💀</span>}
+                  <span className="text-xl font-bold text-white leading-none">{player.id}</span>
+                  {player.alive && isValidTarget && (
+                    <span className="text-xs text-sky-300 mt-1">查验</span>
+                  )}
+                  {!player.alive && <span className="text-xs text-slate-500 mt-1">已死亡</span>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <button
+          onClick={finishSeerCheck}
+          disabled={!!seer && !checkedPlayer}
+          className={`w-full py-4 rounded-2xl text-white font-bold text-lg transition-all ${
+            !seer || checkedPlayer
+              ? "bg-purple-600 hover:bg-purple-500"
+              : "bg-slate-700 text-slate-500 cursor-not-allowed"
+          }`}
+        >
+          预言家闭眼 →
+        </button>
+
+        <button
+          onClick={() => endGameManually()}
+          className="w-full py-3 rounded-xl font-semibold text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all mt-3"
         >
           🏁 结束游戏
         </button>

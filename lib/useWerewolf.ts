@@ -47,7 +47,7 @@ export interface Player {
   alive: boolean; // 是否存活
 }
 
-export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_witch" | "day_sheriff_election" | "day" | "werewolf_assassination" | "game_over";
+export type GamePhase = "setup" | "dealt" | "night_werewolf" | "night_seer" | "night_witch" | "day_sheriff_election" | "day" | "werewolf_assassination" | "game_over";
 
 interface WerewolfState {
   phase: GamePhase;
@@ -57,6 +57,7 @@ interface WerewolfState {
   activePlayerId: number | null;
   globalUnlocked: boolean;
   nightKillTarget: number | null; // 今晚狼人杀的目标
+  seerCheckTarget: number | null; // 今晚预言家查验的目标
   witchSaved: boolean; // 女巫是否使用了解药
   witchUsedSave: boolean; // 女巫是否已经用过解药
   nightDeaths: number[]; // 今晚死亡的玩家
@@ -128,6 +129,10 @@ function buildRoleList(config: RoleConfig): RoleName[] {
   return roles;
 }
 
+function hasAliveRole(players: Player[], role: RoleName): boolean {
+  return players.some(p => p.alive && p.role === role);
+}
+
 export function useWerewolf() {
   const [state, setState] = useState<WerewolfState>(() => ({
     phase: "setup",
@@ -137,6 +142,7 @@ export function useWerewolf() {
     activePlayerId: null,
     globalUnlocked: false,
     nightKillTarget: null,
+    seerCheckTarget: null,
     witchSaved: false,
     witchUsedSave: false,
     nightDeaths: [],
@@ -198,6 +204,7 @@ export function useWerewolf() {
         activePlayerId: null,
         globalUnlocked: false,
         nightKillTarget: null,
+        seerCheckTarget: null,
         witchSaved: false,
         witchUsedSave: false,
         nightDeaths: [],
@@ -264,6 +271,7 @@ export function useWerewolf() {
       activePlayerId: null,
       globalUnlocked: false,
       nightKillTarget: null,
+      seerCheckTarget: null,
       witchSaved: false,
       witchUsedSave: false,
       nightDeaths: [],
@@ -305,6 +313,46 @@ export function useWerewolf() {
     return true;
   }, []);
 
+  const resolveNight = useCallback((prev: WerewolfState, useSave: boolean): WerewolfState => {
+    const newNightDeaths: number[] = [];
+    let newWitchUsedSave = prev.witchUsedSave;
+
+    if (useSave && prev.nightKillTarget) {
+      newWitchUsedSave = true;
+    } else if (prev.nightKillTarget) {
+      newNightDeaths.push(prev.nightKillTarget);
+    }
+
+    const newPlayers = prev.players.map(p =>
+      newNightDeaths.includes(p.id) ? { ...p, alive: false } : p
+    );
+    const newAllDeaths = [...prev.allDeaths, ...newNightDeaths];
+    const winner = checkGameEnd(newPlayers);
+    const needsAssassination = !!(winner && shouldEnterAssassination(newPlayers, winner));
+    const isFirstDay = prev.dayCount === 1;
+    const newPhase = needsAssassination
+      ? "werewolf_assassination"
+      : winner
+        ? "game_over"
+        : isFirstDay
+          ? "day_sheriff_election"
+          : "day";
+
+    return {
+      ...prev,
+      seerCheckTarget: null,
+      witchSaved: useSave,
+      witchUsedSave: newWitchUsedSave,
+      nightDeaths: newNightDeaths,
+      players: newPlayers,
+      allDeaths: newAllDeaths,
+      winner: needsAssassination ? null : winner,
+      phase: newPhase,
+      globalUnlocked: (winner && !needsAssassination) ? true : prev.globalUnlocked,
+      pendingAssassination: needsAssassination,
+    };
+  }, [checkGameEnd, shouldEnterAssassination]);
+
   // 手动结束游戏
   const endGameManually = useCallback((winner?: "狼人" | "好人") => {
     setState(prev => {
@@ -328,61 +376,52 @@ export function useWerewolf() {
 
   // 狼人选择杀人目标
   const werewolfKill = useCallback((targetId: number) => {
-    setState(prev => ({
-      ...prev,
-      nightKillTarget: targetId,
-      phase: "night_witch",
-    }));
+    setState(prev => {
+      const nextState = {
+        ...prev,
+        nightKillTarget: targetId,
+        seerCheckTarget: null,
+      };
+
+      if (hasAliveRole(prev.players, "预言家")) {
+        return { ...nextState, phase: "night_seer" };
+      }
+
+      if (hasAliveRole(prev.players, "女巫")) {
+        return { ...nextState, phase: "night_witch" };
+      }
+
+      return resolveNight(nextState, false);
+    });
+  }, [resolveNight]);
+
+  // 预言家查验目标
+  const seerCheck = useCallback((targetId: number) => {
+    setState(prev => {
+      const target = prev.players.find(p => p.id === targetId);
+      if (prev.phase !== "night_seer" || !target || !target.alive) return prev;
+      return {
+        ...prev,
+        seerCheckTarget: targetId,
+      };
+    });
   }, []);
+
+  // 预言家闭眼，继续进入女巫阶段或直接结算夜晚
+  const finishSeerCheck = useCallback(() => {
+    setState(prev => {
+      const nextState = { ...prev, seerCheckTarget: null };
+      if (hasAliveRole(prev.players, "女巫")) {
+        return { ...nextState, phase: "night_witch" };
+      }
+      return resolveNight(nextState, false);
+    });
+  }, [resolveNight]);
 
   // 女巫使用解药
   const witchUseSave = useCallback((useSave: boolean) => {
-    setState(prev => {
-      const newNightDeaths: number[] = [];
-      let newWitchUsedSave = prev.witchUsedSave;
-
-      if (useSave && prev.nightKillTarget) {
-        // 女巫使用了解药，没有人死亡
-        newWitchUsedSave = true;
-      } else if (prev.nightKillTarget) {
-        // 没有使用解药，目标死亡
-        newNightDeaths.push(prev.nightKillTarget);
-      }
-
-      const newPlayers = prev.players.map(p =>
-        newNightDeaths.includes(p.id) ? { ...p, alive: false } : p
-      );
-
-      // 更新所有死亡记录
-      const newAllDeaths = [...prev.allDeaths, ...newNightDeaths];
-
-      // 检查游戏是否结束
-      const winner = checkGameEnd(newPlayers);
-      const needsAssassination = !!(winner && shouldEnterAssassination(newPlayers, winner));
-      // 第一天天亮后先进入争警长环节，再公布首夜死亡情况
-      const isFirstDay = prev.dayCount === 1;
-      const newPhase = needsAssassination
-        ? "werewolf_assassination"
-        : winner
-          ? "game_over"
-          : isFirstDay
-            ? "day_sheriff_election"
-            : "day";
-
-      return {
-        ...prev,
-        witchSaved: useSave,
-        witchUsedSave: newWitchUsedSave,
-        nightDeaths: newNightDeaths,
-        players: newPlayers,
-        allDeaths: newAllDeaths,
-        winner: needsAssassination ? null : winner,
-        phase: newPhase,
-        globalUnlocked: (winner && !needsAssassination) ? true : prev.globalUnlocked,
-        pendingAssassination: needsAssassination,
-      };
-    });
-  }, [checkGameEnd, shouldEnterAssassination]);
+    setState(prev => resolveNight(prev, useSave));
+  }, [resolveNight]);
 
   // 进入下一夜，自动检查游戏是否结束
   const nextNight = useCallback(() => {
@@ -412,6 +451,7 @@ export function useWerewolf() {
         ...prev,
         phase: "night_werewolf",
         nightKillTarget: null,
+        seerCheckTarget: null,
         witchSaved: false,
         nightDeaths: [],
         dayCount: prev.dayCount + 1,
@@ -495,6 +535,8 @@ export function useWerewolf() {
     resetToSetup,
     startGame,
     werewolfKill,
+    seerCheck,
+    finishSeerCheck,
     witchUseSave,
     nextNight,
     endGameManually,
