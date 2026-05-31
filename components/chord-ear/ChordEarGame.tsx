@@ -42,8 +42,12 @@ const NOTES: SolfegeNote[] = [
 const NOTE_BY_ID = Object.fromEntries(NOTES.map(note => [note.id, note])) as Record<NoteId, SolfegeNote>;
 const DEFAULT_STATS: EarStats = { total: 0, correct: 0, streak: 0, bestStreak: 0, matches: 0 };
 const STATS_KEY = "classic-games-generator:chord-ear:stats";
-const SINGLE_NOTE_VOLUME = 0.42;
-const CHORD_NOTE_VOLUME = 0.2;
+const VOLUME_KEY = "classic-games-generator:chord-ear:volume";
+const SINGLE_NOTE_VOLUME = 0.7;
+const CHORD_NOTE_VOLUME = 0.3;
+const DEFAULT_OUTPUT_VOLUME = 140;
+const MIN_OUTPUT_VOLUME = 40;
+const MAX_OUTPUT_VOLUME = 200;
 
 const MODES: { id: Mode; label: string; description: string }[] = [
   { id: "learn", label: "学习", description: "听单音、看答案、熟悉音高" },
@@ -83,6 +87,7 @@ export default function ChordEarGame() {
   const [showAnswer, setShowAnswer] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [stats, setStats] = useState<EarStats>(DEFAULT_STATS);
+  const [outputVolume, setOutputVolume] = useState(DEFAULT_OUTPUT_VOLUME);
   const [players, setPlayers] = useState<MatchPlayer[]>([
     { id: 1, name: "玩家 1", score: 0, attempts: 0 },
     { id: 2, name: "玩家 2", score: 0, attempts: 0 },
@@ -107,6 +112,10 @@ export default function ChordEarGame() {
     try {
       const raw = window.localStorage.getItem(STATS_KEY);
       if (raw) setStats({ ...DEFAULT_STATS, ...JSON.parse(raw) });
+      const savedVolume = Number(window.localStorage.getItem(VOLUME_KEY));
+      if (Number.isFinite(savedVolume)) {
+        setOutputVolume(Math.min(MAX_OUTPUT_VOLUME, Math.max(MIN_OUTPUT_VOLUME, savedVolume)));
+      }
     } catch {
       setStats(DEFAULT_STATS);
     }
@@ -145,11 +154,12 @@ export default function ChordEarGame() {
       const start = asChord ? now : now + index * (duration + gap);
       const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
+      const targetGain = (asChord ? CHORD_NOTE_VOLUME : SINGLE_NOTE_VOLUME) * (outputVolume / 100);
 
-      oscillator.type = "sine";
+      oscillator.type = "triangle";
       oscillator.frequency.setValueAtTime(note.hz, start);
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(asChord ? CHORD_NOTE_VOLUME : SINGLE_NOTE_VOLUME, start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(targetGain, start + 0.03);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
       oscillator.connect(gain);
@@ -253,6 +263,16 @@ export default function ChordEarGame() {
     saveStats(DEFAULT_STATS);
   };
 
+  const updateOutputVolume = (value: number) => {
+    const next = Math.min(MAX_OUTPUT_VOLUME, Math.max(MIN_OUTPUT_VOLUME, value));
+    setOutputVolume(next);
+    try {
+      window.localStorage.setItem(VOLUME_KEY, String(next));
+    } catch {
+      // localStorage can be unavailable in private browsing.
+    }
+  };
+
   const updatePlayerName = (id: number, name: string) => {
     setPlayers(prev =>
       prev.map(player =>
@@ -339,6 +359,33 @@ export default function ChordEarGame() {
             <p className="text-sm text-slate-400">
               {MODES.find(item => item.id === mode)?.description}
             </p>
+            <div className="mt-4 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-3">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <label htmlFor="chord-ear-volume" className="text-sm font-semibold text-slate-200">
+                  播放音量
+                </label>
+                <span className="text-sm font-bold text-cyan-300">{outputVolume}%</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  id="chord-ear-volume"
+                  type="range"
+                  min={MIN_OUTPUT_VOLUME}
+                  max={MAX_OUTPUT_VOLUME}
+                  step={5}
+                  value={outputVolume}
+                  onChange={event => updateOutputVolume(Number(event.target.value))}
+                  className="w-full accent-cyan-400"
+                />
+                <button
+                  onClick={() => void playNotes([selectedNotes[0]])}
+                  disabled={isPlaying}
+                  className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 text-xs font-semibold whitespace-nowrap"
+                >
+                  试听
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-slate-700 bg-slate-800 p-4 sm:p-5">
