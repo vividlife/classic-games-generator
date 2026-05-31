@@ -13,12 +13,24 @@ export default function GoGame() {
   const [confirmResign, setConfirmResign] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const game = useGo();
+  const {
+    aiPlayer,
+    board,
+    boardSize,
+    currentPlayer,
+    koPoint,
+    mode,
+    pass,
+    placeStone,
+    status,
+    undo,
+  } = game;
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const playerLabel = (p: GoPlayer) => (p === "black" ? "黑方" : "白方");
 
-  const isAITurn = game.mode === "ai" && game.status === "playing" && game.currentPlayer === game.aiPlayer;
-  const isHumanTurn = game.status === "playing" && !isAITurn;
+  const isAITurn = mode === "ai" && status === "playing" && currentPlayer === aiPlayer;
+  const isHumanTurn = status === "playing" && !isAITurn;
 
   // AI auto-play
   useEffect(() => {
@@ -27,11 +39,11 @@ export default function GoGame() {
     setAiThinking(true);
     // Small delay so the UI shows "AI thinking" before the move
     aiTimerRef.current = setTimeout(() => {
-      const move = computeAIMove(game.board, game.currentPlayer, game.koPoint, game.boardSize);
+      const move = computeAIMove(board, currentPlayer, koPoint, boardSize);
       if (move.type === "place" && move.row !== undefined && move.col !== undefined) {
-        game.placeStone(move.row, move.col);
+        placeStone(move.row, move.col);
       } else {
-        game.pass();
+        pass();
       }
       setAiThinking(false);
     }, 400);
@@ -39,7 +51,7 @@ export default function GoGame() {
     return () => {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
-  }, [isAITurn, game.board, game.currentPlayer, game.koPoint, game.boardSize, game.placeStone, game.pass, aiThinking]);
+  }, [isAITurn, board, currentPlayer, koPoint, boardSize, placeStone, pass, aiThinking]);
 
   // Reset AI thinking state on game reset/over
   useEffect(() => {
@@ -50,8 +62,8 @@ export default function GoGame() {
   }, [game.status]);
 
   const handleUndo = useCallback(() => {
-    game.undo();
-  }, [game]);
+    undo();
+  }, [undo]);
 
   // Idle screen: mode + board size selection
   if (game.status === "idle") {

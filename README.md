@@ -1,6 +1,6 @@
 # Classic Games Generator
 
-A polished, production-ready web app featuring **Snake** and **Tetris** — two timeless classics — built with Next.js 15, TypeScript, and Tailwind CSS.
+A polished web app featuring a growing collection of classic, puzzle, and number-sense games built with Next.js 15, TypeScript, and Tailwind CSS.
 
 **Live Demo:** [Deploy to Vercel](#deploy-to-vercel)
 **Repository:** [github.com/vividlife/classic-games-generator](https://github.com/vividlife/classic-games-generator)
@@ -12,6 +12,19 @@ A polished, production-ready web app featuring **Snake** and **Tetris** — two 
 ### Games
 - **Snake** — Guide the snake to eat food and grow. Walls wrap around. Speed increases with level.
 - **Tetris** — Stack falling tetrominoes to clear rows. Includes ghost piece, wall kicks, and hard drop.
+- **Gomoku** — Play five-in-a-row against another player or the built-in AI.
+- **Game 24** — Combine four cards with arithmetic operations to make 24.
+- **Guess Number** — Classic "A/B" number deduction game.
+- **Werewolf Dealer** — Lightweight Werewolf role assignment and night-flow helper.
+- **Sudoku** — 9×9 Sudoku with multiple difficulties and hints.
+- **Sokoban** — Push boxes onto target tiles with undo support.
+- **Reversi** — Two-player Othello/Reversi board game.
+- **Go** — 9×9, 13×13, and 19×19 Go with PvP and AI modes.
+- **Tangram** — Arrange seven pieces to match puzzle shapes.
+- **Tower of Hanoi** — Move all disks under a time limit.
+- **Circle Groups** — Solve quantity relationship puzzles with movable circles.
+- **Counter Reading** — Practice dialing and reading multi-digit numbers.
+- **2048** — Merge numbered tiles to reach 2048.
 
 ### Game Settings
 - **Difficulty** — Easy / Medium / Hard, each with different speeds and score multipliers (×1 / ×1.5 / ×2)
@@ -21,8 +34,8 @@ A polished, production-ready web app featuring **Snake** and **Tetris** — two 
 ### Score System
 - Score multipliers based on difficulty
 - Level progression (Snake: every 5 food; Tetris: every 10 lines)
-- Per-game leaderboard stored in localStorage (top 10 entries)
-- Scores visible in-game after game over
+- Snake and Tetris leaderboards stored in localStorage (top 10 entries)
+- Scores visible in-game after game over where supported
 
 ### Controls
 
@@ -41,13 +54,15 @@ A polished, production-ready web app featuring **Snake** and **Tetris** — two 
 | Rotate | ↑ or X |
 | Pause | Esc |
 
+Other games include on-screen controls and page-specific instructions.
+
 ---
 
 ## Tech Stack
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Next.js | 15.5.12 | React framework, App Router |
+| Next.js | 15.5.18 | React framework, App Router |
 | TypeScript | 5 | Type safety |
 | Tailwind CSS | 3.3 | Styling |
 | Zustand | 5 | Persistent settings state |
@@ -63,17 +78,9 @@ classic-games-generator/
 │   ├── layout.tsx          # Root layout
 │   ├── page.tsx            # Home page (game selection)
 │   ├── globals.css         # Global styles
-│   ├── snake/page.tsx      # Snake game page
-│   └── tetris/page.tsx     # Tetris game page
+│   └── <game>/page.tsx     # Individual game pages
 ├── components/
-│   ├── snake/
-│   │   ├── SnakeGame.tsx   # Game container & logic wiring
-│   │   ├── SnakeBoard.tsx  # Canvas-free grid renderer
-│   │   └── SnakeControls.tsx # Mobile touch controls
-│   ├── tetris/
-│   │   ├── TetrisGame.tsx  # Game container & logic wiring
-│   │   ├── TetrisBoard.tsx # Board renderer with ghost piece
-│   │   └── TetrisControls.tsx # Mobile touch controls
+│   ├── <game>/             # Game-specific React components
 │   └── ui/
 │       ├── Button.tsx      # Reusable button component
 │       ├── Badge.tsx       # Status badge
@@ -81,8 +88,7 @@ classic-games-generator/
 │       ├── GameSettings.tsx # Difficulty/theme/name settings
 │       └── ScoreBoard.tsx  # Leaderboard display
 ├── lib/
-│   ├── useSnake.ts         # Snake game logic hook (useReducer)
-│   ├── useTetris.ts        # Tetris game logic hook (useReducer)
+│   ├── use*.ts             # Game logic hooks
 │   ├── tetrominos.ts       # Tetromino shapes & rotations
 │   ├── gameStore.ts        # Zustand store for settings
 │   └── scoreManager.ts     # localStorage score management
