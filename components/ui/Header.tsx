@@ -13,6 +13,7 @@ const navItems = [
   { path: "/guess-number", label: "猜数字" },
   { path: "/werewolf", label: "狼人杀" },
   { path: "/chord-ear", label: "和弦听辨" },
+  { path: "/chinese-quiz", label: "文常问答" },
   { path: "/sudoku", label: "数独" },
   { path: "/reversi", label: "黑白棋" },
   { path: "/go", label: "围棋" },
