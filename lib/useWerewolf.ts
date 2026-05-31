@@ -2,7 +2,9 @@
 
 import { useState, useCallback } from "react";
 
-export type RoleName = "狼人" | "村民" | "预言家" | "女巫" | "猎人" | "守卫";
+export type RoleName = "狼人" | "村民" | "预言家" | "女巫" | "预巫" | "猎人" | "守卫";
+type SeerRoleName = Extract<RoleName, "预言家" | "预巫">;
+type WitchRoleName = Extract<RoleName, "女巫" | "预巫">;
 
 export interface Role {
   name: RoleName;
@@ -16,6 +18,7 @@ export const ROLES: Record<RoleName, Role> = {
   村民: { name: "村民", emoji: "👨‍🌾", description: "没有特殊能力，靠推理投票", team: "好人" },
   预言家: { name: "预言家", emoji: "🔮", description: "每晚可以查验一名玩家的阵营", team: "好人" },
   女巫: { name: "女巫", emoji: "🧙‍♀️", description: "有一瓶解药和一瓶毒药各用一次", team: "好人" },
+  预巫: { name: "预巫", emoji: "🧿", description: "每晚可以查验一名玩家的阵营，并拥有一瓶解药，没有毒药", team: "好人" },
   猎人: { name: "猎人", emoji: "🏹", description: "被杀死时可以开枪带走一名玩家", team: "好人" },
   守卫: { name: "守卫", emoji: "🛡️", description: "每晚可以守护一名玩家免受狼杀", team: "好人" },
 };
@@ -23,7 +26,7 @@ export const ROLES: Record<RoleName, Role> = {
 export type RoleConfig = Partial<Record<RoleName, number>>;
 
 export const PRESET_CONFIGS: Record<number, RoleConfig> = {
-  4:  { 狼人: 1, 预言家: 1, 村民: 2 },
+  4:  { 狼人: 1, 预巫: 1, 村民: 2 },
   5:  { 狼人: 1, 预言家: 1, 女巫: 1, 村民: 2 },
   6:  { 狼人: 2, 预言家: 1, 女巫: 1, 村民: 2 },
   7:  { 狼人: 2, 预言家: 1, 女巫: 1, 猎人: 1, 村民: 2 },
@@ -58,8 +61,11 @@ interface WerewolfState {
   globalUnlocked: boolean;
   nightKillTarget: number | null; // 今晚狼人杀的目标
   seerCheckTarget: number | null; // 今晚预言家查验的目标
+  nightSeerRole: SeerRoleName | null; // 今晚负责查验的角色
+  nightWitchRole: WitchRoleName | null; // 今晚负责救人的角色
   witchSaved: boolean; // 女巫是否使用了解药
   witchUsedSave: boolean; // 女巫是否已经用过解药
+  witchActedThisNight: boolean; // 今晚救人阶段是否已经处理
   nightDeaths: number[]; // 今晚死亡的玩家
   dayCount: number; // 第几天
   winner: "狼人" | "好人" | null; // 游戏胜利方
@@ -133,6 +139,10 @@ function hasAliveRole(players: Player[], role: RoleName): boolean {
   return players.some(p => p.alive && p.role === role);
 }
 
+function findAliveRole<T extends RoleName>(players: Player[], roles: T[]): T | null {
+  return roles.find(role => hasAliveRole(players, role)) ?? null;
+}
+
 export function useWerewolf() {
   const [state, setState] = useState<WerewolfState>(() => ({
     phase: "setup",
@@ -143,8 +153,11 @@ export function useWerewolf() {
     globalUnlocked: false,
     nightKillTarget: null,
     seerCheckTarget: null,
+    nightSeerRole: null,
+    nightWitchRole: null,
     witchSaved: false,
     witchUsedSave: false,
+    witchActedThisNight: false,
     nightDeaths: [],
     dayCount: 1,
     winner: null,
@@ -205,8 +218,11 @@ export function useWerewolf() {
         globalUnlocked: false,
         nightKillTarget: null,
         seerCheckTarget: null,
+        nightSeerRole: null,
+        nightWitchRole: null,
         witchSaved: false,
         witchUsedSave: false,
+        witchActedThisNight: false,
         nightDeaths: [],
         dayCount: 1,
         winner: null,
@@ -272,8 +288,11 @@ export function useWerewolf() {
       globalUnlocked: false,
       nightKillTarget: null,
       seerCheckTarget: null,
+      nightSeerRole: null,
+      nightWitchRole: null,
       witchSaved: false,
       witchUsedSave: false,
+      witchActedThisNight: false,
       nightDeaths: [],
       dayCount: 1,
       winner: null,
@@ -377,18 +396,29 @@ export function useWerewolf() {
   // 狼人选择杀人目标
   const werewolfKill = useCallback((targetId: number) => {
     setState(prev => {
+      const preWitchAlive = hasAliveRole(prev.players, "预巫");
+      const seerRole = findAliveRole<SeerRoleName>(prev.players, ["预言家"]);
+      const witchRole = findAliveRole<WitchRoleName>(prev.players, ["女巫"]);
       const nextState = {
         ...prev,
         nightKillTarget: targetId,
         seerCheckTarget: null,
+        nightSeerRole: null,
+        nightWitchRole: null,
+        witchSaved: false,
+        witchActedThisNight: false,
       };
 
-      if (hasAliveRole(prev.players, "预言家")) {
-        return { ...nextState, phase: "night_seer" };
+      if (preWitchAlive) {
+        return { ...nextState, phase: "night_witch", nightWitchRole: "预巫" };
       }
 
-      if (hasAliveRole(prev.players, "女巫")) {
-        return { ...nextState, phase: "night_witch" };
+      if (seerRole) {
+        return { ...nextState, phase: "night_seer", nightSeerRole: seerRole };
+      }
+
+      if (witchRole) {
+        return { ...nextState, phase: "night_witch", nightWitchRole: witchRole };
       }
 
       return resolveNight(nextState, false);
@@ -411,8 +441,11 @@ export function useWerewolf() {
   const finishSeerCheck = useCallback(() => {
     setState(prev => {
       const nextState = { ...prev, seerCheckTarget: null };
+      if (prev.witchActedThisNight) {
+        return resolveNight(nextState, prev.witchSaved);
+      }
       if (hasAliveRole(prev.players, "女巫")) {
-        return { ...nextState, phase: "night_witch" };
+        return { ...nextState, phase: "night_witch", nightWitchRole: "女巫" };
       }
       return resolveNight(nextState, false);
     });
@@ -420,7 +453,26 @@ export function useWerewolf() {
 
   // 女巫使用解药
   const witchUseSave = useCallback((useSave: boolean) => {
-    setState(prev => resolveNight(prev, useSave));
+    setState(prev => {
+      const canUseSave = useSave && !prev.witchUsedSave && !!prev.nightKillTarget;
+      const nextState = {
+        ...prev,
+        witchSaved: canUseSave,
+        witchUsedSave: canUseSave ? true : prev.witchUsedSave,
+        witchActedThisNight: true,
+      };
+
+      if (prev.nightWitchRole === "预巫") {
+        return {
+          ...nextState,
+          phase: "night_seer",
+          nightSeerRole: "预巫",
+          seerCheckTarget: null,
+        };
+      }
+
+      return resolveNight(nextState, canUseSave);
+    });
   }, [resolveNight]);
 
   // 进入下一夜，自动检查游戏是否结束
@@ -452,7 +504,10 @@ export function useWerewolf() {
         phase: "night_werewolf",
         nightKillTarget: null,
         seerCheckTarget: null,
+        nightSeerRole: null,
+        nightWitchRole: null,
         witchSaved: false,
+        witchActedThisNight: false,
         nightDeaths: [],
         dayCount: prev.dayCount + 1,
         votedOutPlayerId: null,

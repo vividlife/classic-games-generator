@@ -8,10 +8,11 @@ const VOICE_PROMPTS = {
   night_start: "天黑了，所有玩家请闭眼",
   werewolf_open: "狼人请睁眼，请选择要猎杀的目标",
   werewolf_close: "狼人请闭眼",
-  seer_open: "预言家请睁眼，请选择一名玩家查验身份",
-  seer_close: "预言家请闭眼",
-  witch_open: () => "女巫请睁眼",
-  witch_close: "女巫请闭眼",
+  seer_open: (role: "预言家" | "预巫") => `${role}请睁眼，请选择一名玩家查验身份`,
+  seer_continue: "预巫请继续睁眼，请选择一名玩家查验身份",
+  seer_close: (role: "预言家" | "预巫") => `${role}请闭眼`,
+  witch_open: (role: "女巫" | "预巫") => `${role}请睁眼`,
+  witch_close: (role: "女巫" | "预巫") => `${role}请闭眼`,
   day_start: "天亮了，所有玩家请睁眼",
   sheriff_election_start: "天亮了，所有玩家请睁眼。现在开始争夺警长，请各位发言竞选或推荐候选人",
   assassination_start: "狼人阵营即将失败，但还有最后一次刺杀机会！",
@@ -35,7 +36,7 @@ function speak(text: string, enabled: boolean) {
   window.speechSynthesis.speak(utterance);
 }
 
-const ALL_ROLES: RoleName[] = ["狼人", "村民", "预言家", "女巫", "猎人", "守卫"];
+const ALL_ROLES: RoleName[] = ["狼人", "村民", "预言家", "女巫", "预巫", "猎人", "守卫"];
 
 export default function WerewolfDealer() {
   const {
@@ -48,6 +49,8 @@ export default function WerewolfDealer() {
     totalRoles,
     nightKillTarget,
     seerCheckTarget,
+    nightSeerRole,
+    nightWitchRole,
     witchUsedSave,
     nightDeaths,
     dayCount,
@@ -88,6 +91,9 @@ export default function WerewolfDealer() {
     if (!voiceEnabled) return;
     if (phase === lastSpokenPhase) return;
 
+    const seerVoiceRole = nightSeerRole ?? "预言家";
+    const witchVoiceRole = nightWitchRole ?? "女巫";
+
     // 当进入夜晚（狼人阶段）时，播放"天黑了"
     if (phase === "night_werewolf" && prevPhaseRef.current !== "night_werewolf") {
       // 如果是从白天或开始游戏进入，则先播放"天黑了"
@@ -106,7 +112,7 @@ export default function WerewolfDealer() {
     else if (phase === "night_witch" && lastSpokenPhase === "night_werewolf") {
       speak(VOICE_PROMPTS.werewolf_close, true);
       setTimeout(() => {
-        speak(VOICE_PROMPTS.witch_open(), true);
+        speak(VOICE_PROMPTS.witch_open(witchVoiceRole), true);
       }, 2000);
       setLastSpokenPhase(phase);
     }
@@ -114,15 +120,27 @@ export default function WerewolfDealer() {
     else if (phase === "night_seer" && lastSpokenPhase === "night_werewolf") {
       speak(VOICE_PROMPTS.werewolf_close, true);
       setTimeout(() => {
-        speak(VOICE_PROMPTS.seer_open, true);
+        speak(VOICE_PROMPTS.seer_open(seerVoiceRole), true);
       }, 2000);
+      setLastSpokenPhase(phase);
+    }
+    // 预巫救人后继续查验
+    else if (phase === "night_seer" && lastSpokenPhase === "night_witch") {
+      if (nightWitchRole === "预巫" && nightSeerRole === "预巫") {
+        speak(VOICE_PROMPTS.seer_continue, true);
+      } else {
+        speak(VOICE_PROMPTS.witch_close(witchVoiceRole), true);
+        setTimeout(() => {
+          speak(VOICE_PROMPTS.seer_open(seerVoiceRole), true);
+        }, 2000);
+      }
       setLastSpokenPhase(phase);
     }
     // 当预言家之后进入女巫阶段时，先播放"预言家请闭眼"
     else if (phase === "night_witch" && lastSpokenPhase === "night_seer") {
-      speak(VOICE_PROMPTS.seer_close, true);
+      speak(VOICE_PROMPTS.seer_close(seerVoiceRole), true);
       setTimeout(() => {
-        speak(VOICE_PROMPTS.witch_open(), true);
+        speak(VOICE_PROMPTS.witch_open(witchVoiceRole), true);
       }, 2000);
       setLastSpokenPhase(phase);
     }
@@ -133,9 +151,9 @@ export default function WerewolfDealer() {
     ) {
       const closePrompt =
         lastSpokenPhase === "night_witch"
-          ? VOICE_PROMPTS.witch_close
+          ? VOICE_PROMPTS.witch_close(witchVoiceRole)
           : lastSpokenPhase === "night_seer"
-            ? VOICE_PROMPTS.seer_close
+            ? VOICE_PROMPTS.seer_close(seerVoiceRole)
             : VOICE_PROMPTS.werewolf_close;
       speak(closePrompt, true);
       setTimeout(() => {
@@ -150,9 +168,9 @@ export default function WerewolfDealer() {
     ) {
       const closePrompt =
         lastSpokenPhase === "night_witch"
-          ? VOICE_PROMPTS.witch_close
+          ? VOICE_PROMPTS.witch_close(witchVoiceRole)
           : lastSpokenPhase === "night_seer"
-            ? VOICE_PROMPTS.seer_close
+            ? VOICE_PROMPTS.seer_close(seerVoiceRole)
             : VOICE_PROMPTS.werewolf_close;
       speak(closePrompt, true);
       setTimeout(() => {
@@ -172,7 +190,7 @@ export default function WerewolfDealer() {
     }
 
     prevPhaseRef.current = phase;
-  }, [phase, voiceEnabled, lastSpokenPhase, nightKillTarget, setLastSpokenPhase]);
+  }, [phase, voiceEnabled, lastSpokenPhase, nightKillTarget, nightSeerRole, nightWitchRole, setLastSpokenPhase]);
 
   const adjustRole = (role: RoleName, delta: number) => {
     const current = roleConfig[role] ?? 0;
@@ -537,7 +555,8 @@ export default function WerewolfDealer() {
 
   // ─── Night Seer Phase ───────────────────────────────────────────────────────
   if (phase === "night_seer") {
-    const seer = players.find(p => p.role === "预言家" && p.alive);
+    const seerRole = nightSeerRole ?? (players.some(p => p.role === "预巫" && p.alive) ? "预巫" : "预言家");
+    const seer = players.find(p => p.role === seerRole && p.alive);
     const checkedPlayer = seerCheckTarget ? players.find(p => p.id === seerCheckTarget) : null;
     const checkedTeam = checkedPlayer ? ROLES[checkedPlayer.role].team : null;
 
@@ -558,9 +577,9 @@ export default function WerewolfDealer() {
         </div>
 
         <div className="text-center mb-6">
-          <div className="text-5xl mb-2">🔮</div>
+          <div className="text-5xl mb-2">{ROLES[seerRole].emoji}</div>
           <h1 className="text-2xl font-bold text-white">第 {dayCount} 夜</h1>
-          <p className="text-sky-400 mt-2 text-lg font-semibold">预言家请睁眼</p>
+          <p className="text-sky-400 mt-2 text-lg font-semibold">{seerRole}请睁眼</p>
           <p className="text-slate-400 mt-1 text-sm">
             {checkedPlayer ? "查验完成，请记住结果" : "选择一名玩家查验阵营"}
           </p>
@@ -568,7 +587,7 @@ export default function WerewolfDealer() {
 
         {!seer && (
           <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 mb-6 text-center">
-            <p className="text-slate-300 text-sm">本局没有存活的预言家</p>
+            <p className="text-slate-300 text-sm">本局没有存活的{seerRole}</p>
           </div>
         )}
 
@@ -633,7 +652,7 @@ export default function WerewolfDealer() {
               : "bg-slate-700 text-slate-500 cursor-not-allowed"
           }`}
         >
-          预言家闭眼 →
+          {seerRole}闭眼 →
         </button>
 
         <button
@@ -648,7 +667,8 @@ export default function WerewolfDealer() {
 
   // ─── Night Witch Phase ───────────────────────────────────────────────────────
   if (phase === "night_witch") {
-    const witch = players.find(p => p.role === "女巫" && p.alive);
+    const witchRole = nightWitchRole ?? (players.some(p => p.role === "预巫" && p.alive) ? "预巫" : "女巫");
+    const witch = players.find(p => p.role === witchRole && p.alive);
     const killedPlayer = nightKillTarget ? players.find(p => p.id === nightKillTarget) : null;
 
     return (
@@ -668,9 +688,9 @@ export default function WerewolfDealer() {
         </div>
 
         <div className="text-center mb-6">
-          <div className="text-5xl mb-2">🌙</div>
+          <div className="text-5xl mb-2">{ROLES[witchRole].emoji}</div>
           <h1 className="text-2xl font-bold text-white">第 {dayCount} 夜</h1>
-          <p className="text-purple-400 mt-2 text-lg font-semibold">女巫请睁眼</p>
+          <p className="text-purple-400 mt-2 text-lg font-semibold">{witchRole}请睁眼</p>
           <p className="text-slate-400 mt-1 text-sm">
             {witchUsedSave ? "你的解药已使用" : "今晚有人被杀，要使用解药吗？"}
           </p>
@@ -712,7 +732,7 @@ export default function WerewolfDealer() {
             onClick={() => witchUseSave(false)}
             className="w-full py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-lg transition-all"
           >
-            天亮了 →
+            {witchRole === "预巫" ? "继续查验 →" : "天亮了 →"}
           </button>
         )}
 
