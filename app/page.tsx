@@ -12,7 +12,7 @@ export default function Home() {
             荣升的游戏小站
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm lg:text-base">
-            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、数独、推箱子、黑白棋、围棋、七巧板、汉诺塔、摆圆片、拨数读数和 2048，支持多种主题和难度设置
+            畅玩贪吃蛇、俄罗斯方块、五子棋、24点、猜数字、狼人杀、和弦听辨、数独、推箱子、黑白棋、围棋、七巧板、汉诺塔、摆圆片、拨数读数和 2048，支持多种主题和难度设置
           </p>
         </div>
 
@@ -158,6 +158,30 @@ export default function Home() {
               </span>
             </div>
             <div className="absolute top-3 sm:top-4 right-3 sm:right-4 text-slate-600 group-hover:text-purple-400 transition-colors text-base sm:text-xl">
+              →
+            </div>
+          </Link>
+
+          <Link
+            href="/chord-ear"
+            className="group relative bg-slate-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 xl:p-8 border border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800/80 transition-all duration-200 cursor-pointer no-dbl-tap-zoom"
+          >
+            <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl mb-3 sm:mb-4">🎹</div>
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white mb-1 sm:mb-2 group-hover:text-cyan-400 transition-colors">
+              和弦听辨
+            </h2>
+            <p className="text-slate-400 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">
+              听随机音符组合，按顺序输入 Do Re Mi，支持学习、练习和家庭赛！
+            </p>
+            <div className="flex flex-wrap gap-1.5 text-[10px] sm:text-xs">
+              <span className="bg-cyan-900/50 text-cyan-300 px-2 py-0.5 sm:py-1 rounded">
+                音乐启蒙
+              </span>
+              <span className="bg-slate-700 text-slate-300 px-2 py-0.5 sm:py-1 rounded">
+                成绩统计
+              </span>
+            </div>
+            <div className="absolute top-3 sm:top-4 right-3 sm:right-4 text-slate-600 group-hover:text-cyan-500 transition-colors text-base sm:text-xl">
               →
             </div>
           </Link>

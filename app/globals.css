@@ -146,6 +146,15 @@ body {
   .btn-responsive-sm {
     @apply px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-md text-sm font-medium transition-colors touch-target;
   }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* 移动端优化 (iPhone) */

@@ -12,6 +12,7 @@ const navItems = [
   { path: "/game24", label: "24点" },
   { path: "/guess-number", label: "猜数字" },
   { path: "/werewolf", label: "狼人杀" },
+  { path: "/chord-ear", label: "和弦听辨" },
   { path: "/sudoku", label: "数独" },
   { path: "/reversi", label: "黑白棋" },
   { path: "/go", label: "围棋" },
@@ -62,7 +63,7 @@ export default function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-1 overflow-x-auto py-1">
+        <nav className="hidden lg:flex items-center gap-1 overflow-x-auto scrollbar-none py-1">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -79,7 +80,7 @@ export default function Header() {
         </nav>
 
         {/* Tablet Navigation - 简化版 */}
-        <nav className="hidden md:flex lg:hidden items-center gap-1 overflow-x-auto py-1">
+        <nav className="hidden md:flex lg:hidden items-center gap-1 overflow-x-auto scrollbar-none py-1">
           {navItems.slice(0, 8).map((item) => (
             <Link
               key={item.path}
